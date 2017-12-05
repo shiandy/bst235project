@@ -11,7 +11,8 @@ n <- 1000
 set.seed(1262)
 system.time({
     sim_res <- link_viol_sim(nsims, betas, x_simulator, n,
-                             error_simulator = error_simulator)
+                             error_simulator = error_simulator,
+                             testsize = 10000)
 })
 
 test_that("link_viol_sim returns objects with correct dimensions", {

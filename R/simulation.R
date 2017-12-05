@@ -33,8 +33,6 @@
 #' @param error_simulator Function whose first argument is n. Generates
 #'   n replicates of epsilon. The return value of this function should
 #'   be an n x 1 vector.
-#' @param kern Kernel function to use for smoothing the predicted
-#'   values.
 #' @param testsize Sample size for the simulated validation dataset.
 #'
 #' @return \code{link_viol_sim} returns a list with two named elements:
@@ -50,8 +48,7 @@
 #' \item{ys}{length-n vector of outcomes}
 #' }
 link_viol_sim <- function(nsims, betas, x_simulator, n,
-                          error_simulator = rnorm, kern = dnorm,
-                          testsize = 5000) {
+                          error_simulator = rnorm, testsize = 5000) {
 
     stopifnot(length(betas) > 1)
     betas_est <- matrix(NA, nrow = nsims, ncol = length(betas))
@@ -77,7 +74,7 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
         # calibration step
         calibrate_preds <- np_calibrate(test_dat$xs,
                                         train_dat$xs, train_dat$ys,
-                                        alasso_cv, kern)
+                                        alasso_cv)
         # calculate errors
         errors[i, ] <- vapply(list(true_preds, naive_preds,
                                   calibrate_preds),
@@ -111,15 +108,24 @@ sim_data <- function(betas, x_simulator, error_simulator, n) {
 #' @param xs Matrix of old predictors
 #' @param ys Vector of old observed values
 #' @param glmnet_obj A glmnet object for which there is a predict method
-#' @param kern Kernel used for smoothing
 #'
 #' @return Nonparametrically calibrated predicted means.
-np_calibrate <- function(new_xs, xs, ys, glmnet_obj, kern) {
+np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     stopifnot(ncol(xs) == ncol(new_xs))
     yhat <- as.vector(predict(glmnet_obj, xs, s = "lambda.min"))
     yhat_new <- as.vector(predict(glmnet_obj, new_xs, s = "lambda.min"))
-    kern_diffs <- kern(outer(yhat, yhat_new, `-`))
-    mhat <- (t(kern_diffs) %*% ys) / colSums(kern_diffs)
+    # estimate best bandwidth
+    best_h <- KernSmooth::dpill(yhat, ys)
+    # much faster
+    kern_fit <- ksmooth(yhat, ys, kernel = "normal", bandwidth = best_h,
+                        x.points = yhat_new)
+    # need to reorder the kernel points according to yhat_new's
+    # original order
+    reorder_inds <- match(yhat_new, kern_fit$x)
+    stopifnot(all.equal(kern_fit$x[reorder_inds], yhat_new))
+    mhat <- kern_fit$y[reorder_inds]
+    #kern_diffs <- kern(outer(yhat, yhat_new, `-`))
+    #mhat <- (t(kern_diffs) %*% ys) / colSums(kern_diffs)
     return(mhat)
 }
 
