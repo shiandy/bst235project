@@ -88,7 +88,8 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
 
 #' @describeIn link_viol_sim Simulate the data
 sim_data <- function(betas, x_simulator, error_simulator, n) {
-    xs <- scale(x_simulator(n), center = TRUE, scale = TRUE)
+    #xs <- scale(x_simulator(n), center = TRUE, scale = TRUE)
+    xs <- x_simulator(n)
     stopifnot(dim(xs) == c(n, length(betas) - 1))
     errors <- error_simulator(n)
     ys <- betas[1] + pnorm(xs %*% betas[-1]) + errors
@@ -180,7 +181,7 @@ adaptive_lasso <- function(xs, ys, gam = 1, nfolds = 10) {
     ols_reg <- lm(ys ~ xs)
     beta_ini <- coef(ols_reg)[-1]
     penalty_weights = 1 / (abs(beta_ini)^gam)
-    cv <- glmnet::cv.glmnet(xs, ys, standardize = FALSE,
+    cv <- glmnet::cv.glmnet(xs, ys, standardize = TRUE,
                             intercept = TRUE, nfolds = nfolds,
                             penalty.factor = penalty_weights)
     return(cv)
