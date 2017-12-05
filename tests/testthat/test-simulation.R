@@ -5,9 +5,9 @@ betas <- c(1, 0, 5)
 x_simulator <- function(n) {
     mvtnorm::rmvnorm(n, sigma = diag(2))
 }
-error_simulator <- function(n) { rnorm(n, sd = 0.5) }
+error_simulator <- function(n) { rnorm(n, sd = 1) }
 nsims <- 10
-n <- 100
+n <- 1000
 set.seed(1262)
 system.time({
     sim_res <- link_viol_sim(nsims, betas, x_simulator, n,
