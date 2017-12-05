@@ -2,53 +2,77 @@
 % Please edit documentation in R/simulation.R
 \name{link_viol_sim}
 \alias{link_viol_sim}
+\alias{sim_data}
 \title{Simulate violations of link function}
 \usage{
-link_viol_sim(nsims, beta, x_simulator, true_link, wrong_link,
-  error_simulator = rnorm, ns = c(10, 100), lambdas = ns^(1/3),
-  kernel = dnorm, bandwidths = c(0.1, 0.05))
+link_viol_sim(nsims, betas, x_simulator, n, error_simulator = rnorm,
+  kern = dnorm, testsize = 5000)
+
+sim_data(betas, x_simulator, error_simulator, n)
 }
 \arguments{
 \item{nsims}{Number of simulations to run.}
 
-\item{beta}{True effects. Should be a length-p vector.}
+\item{betas}{True effects, with first element equal to the intercept.
+Should be a length-(p+1) vector.}
 
 \item{x_simulator}{Function whose first argument is n. Generates n
 replicates of X. The return value of this function should be an n x
 p matrix, or an n x 1 vector.}
 
-\item{true_link}{True link function. Should be an R function that
-takes one argument.}
-
-\item{wrong_link}{Misspecified link function. Should be an R function
-that takes one argument.}
+\item{n}{Number of samples in each simulation.}
 
 \item{error_simulator}{Function whose first argument is n. Generates
 n replicates of epsilon. The return value of this function should
 be an n x 1 vector.}
 
-\item{ns}{Vector of n to use.}
-
-\item{lambdas}{Vector of lambdas to use. Should be the same length as
-ns.}
-
-\item{kernel}{Kernel function to use for smoothing the predicted
+\item{kern}{Kernel function to use for smoothing the predicted
 values.}
 
-\item{bandwidths}{Vector of bandwidths to use for smoothing the
-predicted values.}
+\item{testsize}{Sample size for the simulated validation dataset.}
+
+\item{true_link}{True link function. Should be an R function that
+takes one argument.}
 }
 \value{
-A list with two named elements
+\code{link_viol_sim} returns a list with two named elements:
 \describe{
-\item{betas}{nsims x p DataFrame of estimated coefficients for each
+\item{betas}{nsims x p matrix of estimated coefficients for each
 iteration of the simulation.}
-\item{errors}{nsims x 3 DataFrame of three estimated errors.}
+\item{errors}{nsims x 3 matrix of three estimated errors.}
+}
+
+\code{sim_data} returns a list with two named elements:
+\describe{
+\item{xs}{n x p matrix of predictors}
+\item{ys}{length-n vector of outcomes}
 }
 }
 \description{
-Simulate violations of link function
+Simulate violations of link function. The true model is
+E(Y_i | X_i) = alpha_0 + Phi(beta_0^T X_i),
+where Phi is the Normal CDF, but we fit the model
+E(Y_i | X_i) = alpha + beta^T X
+using adaptive LASSO.
 }
-\examples{
-1 + 1
+\details{
+We calculate the errors using a large validation dataset. The errors
+considered are
+\enumerate{
+\item E((Y_i - hat(alpha) - hat(beta)^T X_i)^2), where hat(alpha) and
+hat(beta) are from adaptive LASSO.
+\item E((Y_i - tilde(m)(X_i)^2), where tilde(m)(X_i) corresponds to
+the conditional mean from fitting the true mode.
+\item E((Y_i - hat(m)(X_i))^2), where hat(m) is a nonparametrically
+calibrated version of the conditional mean. It uses the fitted values
+from adaptive LASSO for the old data and new data, and uses a kernel
+to smooth over them.
 }
+
+\code{link_viol_sim} runs the simulation.
+}
+\section{Functions}{
+\itemize{
+\item \code{sim_data}: Simulate the data
+}}
+
