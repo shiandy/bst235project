@@ -47,23 +47,23 @@ iteration of the simulation.}
 }
 \description{
 Simulate violations of link function. The true model is
-E(Y_i | X_i) = alpha_0 + Phi(beta_0^T X_i),
-where Phi is the Normal CDF, but we fit the model
-E(Y_i | X_i) = alpha + beta^T X
+\eqn{E(Y_i | X_i) = \alpha_0 + \Phi(\beta_0^T X_i),}
+where \eqn{\Phi} is the Normal CDF, but we fit the model
+\eqn{E(Y_i | X_i) = \alpha + \beta^T X}
 using adaptive LASSO.
 }
 \details{
 We calculate the errors using a large validation dataset. The errors
 considered are
 \enumerate{
-\item E((Y_i - hat(alpha) - hat(beta)^T X_i)^2), where hat(alpha) and
-hat(beta) are from adaptive LASSO.
-\item E((Y_i - tilde(m)(X_i)^2), where tilde(m)(X_i) corresponds to
-the conditional mean from fitting the true mode.
-\item E((Y_i - hat(m)(X_i))^2), where hat(m) is a nonparametrically
-calibrated version of the conditional mean. It uses the fitted values
-from adaptive LASSO for the old data and new data, and uses a kernel
-to smooth over them.
+\item \eqn{E((Y_i - \hat{\alpha} - \hat{\beta}^T X_i)^2)}, where
+\eqn{\hat{\alpha}} and \eqn{\hat{\beta}} are from adaptive LASSO.
+\item \eqn{E((Y_i - \tilde{m}(X_i))^2)}, where \eqn{\tilde{m}(X_i)}
+corresponds to the conditional mean from fitting the true mode.
+\item \eqn{E((Y_i - \hat{m}(X_i))^2)}, where \eqn{\hat{m}} is a
+nonparametrically calibrated version of the conditional mean. It uses
+the fitted values from adaptive LASSO for the old data and new data,
+and uses a kernel to smooth over them.
 }
 
 \code{link_viol_sim} runs the simulation.
