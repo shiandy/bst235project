@@ -47,6 +47,7 @@
 #' \item{xs}{n x p matrix of predictors}
 #' \item{ys}{length-n vector of outcomes}
 #' }
+#' @export
 link_viol_sim <- function(nsims, betas, x_simulator, n,
                           error_simulator = rnorm, testsize = 5000) {
 
