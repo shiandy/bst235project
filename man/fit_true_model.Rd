@@ -6,7 +6,7 @@
 \alias{gradient}
 \title{Fit true regression model}
 \usage{
-fit_true_model(xs, ys)
+fit_true_model(xs, ys, init = NULL)
 
 objective(alpha_betas, xs, ys)
 
@@ -16,6 +16,8 @@ gradient(alpha_betas, xs, ys)
 \item{xs}{n x p matrix of predictors}
 
 \item{ys}{Length-n vector of outcomes}
+
+\item{init}{Initial guess for parameters}
 
 \item{alpha_betas}{Value of coefficients to evaluate the function.
 First entry must be the intercept, and the rest are the other

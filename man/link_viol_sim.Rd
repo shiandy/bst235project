@@ -6,7 +6,7 @@
 \title{Simulate violations of link function}
 \usage{
 link_viol_sim(nsims, betas, x_simulator, n, error_simulator = rnorm,
-  kern = dnorm, testsize = 5000)
+  testsize = 5000)
 
 sim_data(betas, x_simulator, error_simulator, n)
 }
@@ -25,9 +25,6 @@ p matrix, or an n x 1 vector.}
 \item{error_simulator}{Function whose first argument is n. Generates
 n replicates of epsilon. The return value of this function should
 be an n x 1 vector.}
-
-\item{kern}{Kernel function to use for smoothing the predicted
-values.}
 
 \item{testsize}{Sample size for the simulated validation dataset.}
 
