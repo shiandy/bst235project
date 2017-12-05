@@ -1,22 +1,22 @@
 #' Simulate violations of link function
 #'
 #' Simulate violations of link function. The true model is
-#' E(Y_i | X_i) = alpha_0 + Phi(beta_0^T X_i),
-#' where Phi is the Normal CDF, but we fit the model
-#' E(Y_i | X_i) = alpha + beta^T X
+#' \eqn{E(Y_i | X_i) = \alpha_0 + \Phi(\beta_0^T X_i),}
+#' where \eqn{\Phi} is the Normal CDF, but we fit the model
+#' \eqn{E(Y_i | X_i) = \alpha + \beta^T X}
 #' using adaptive LASSO.
 #'
 #' We calculate the errors using a large validation dataset. The errors
 #' considered are
 #' \enumerate{
-#' \item E((Y_i - hat(alpha) - hat(beta)^T X_i)^2), where hat(alpha) and
-#' hat(beta) are from adaptive LASSO.
-#' \item E((Y_i - tilde(m)(X_i)^2), where tilde(m)(X_i) corresponds to
-#' the conditional mean from fitting the true mode.
-#' \item E((Y_i - hat(m)(X_i))^2), where hat(m) is a nonparametrically
-#' calibrated version of the conditional mean. It uses the fitted values
-#' from adaptive LASSO for the old data and new data, and uses a kernel
-#' to smooth over them.
+#' \item \eqn{E((Y_i - \hat{\alpha} - \hat{\beta}^T X_i)^2)}, where
+#' \eqn{\hat{\alpha}} and \eqn{\hat{\beta}} are from adaptive LASSO.
+#' \item \eqn{E((Y_i - \tilde{m}(X_i))^2)}, where \eqn{\tilde{m}(X_i)}
+#' corresponds to the conditional mean from fitting the true mode.
+#' \item \eqn{E((Y_i - \hat{m}(X_i))^2)}, where \eqn{\hat{m}} is a
+#' nonparametrically calibrated version of the conditional mean. It uses
+#' the fitted values from adaptive LASSO for the old data and new data,
+#' and uses a kernel to smooth over them.
 #' }
 #'
 #' \code{link_viol_sim} runs the simulation.
@@ -77,11 +77,17 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
                                         train_dat$xs, train_dat$ys,
                                         alasso_cv)
         # calculate errors
-        errors[i, ] <- vapply(list(true_preds, naive_preds,
+        errors_cur <- vapply(list(true_preds, naive_preds,
                                   calibrate_preds),
                              function(x) { mean((test_dat$ys - x)^2) },
                              FUN.VALUE = 2.1)
-        betas_est[i, ] <- as.vector(alasso_betas)
+        # check the result and save
+        betas_cur <- as.vector(alasso_betas)
+        stopifnot(!anyNA(betas_cur))
+        stopifnot(!anyNA(errors_cur))
+
+        betas_est[i, ] <- betas_cur
+        errors[i, ] <- errors_cur
 
     }
     return(list(betas = betas_est, errors = errors))
@@ -118,16 +124,28 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     yhat_new <- as.vector(predict(glmnet_obj, new_xs, s = "lambda.min"))
     # estimate best bandwidth
     best_h <- KernSmooth::dpill(yhat, ys)
-    # much faster
-    kern_fit <- ksmooth(yhat, ys, kernel = "normal", bandwidth = best_h,
-                        x.points = yhat_new)
+    # TODO: sometimes best_h is too small so you'll have points in
+    # yhat_new that don't match to yhat, and for those you'll get an NA
+    # for your fitted y.
+    # For now, just multiply this by 10.
+
+    # Find the max over min pairwise distances between the validation
+    # points and training points
+    #diffs <- outer(yhat, yhat_new, function(x, y) { abs(x - y) })
+    #min_diffs <- matrixStats::colMins(diffs)
+    #max_mindiff <- max(min_diffs)
+
+    #if (best_h <= max_mindiff) {
+    #    best_h <- 2 * max_mindiff
+    #}
+    # much faster way of computing the kernel
+    kern_fit <- ksmooth(yhat, ys, kernel = "normal",
+                        bandwidth = 10 * best_h, x.points = yhat_new)
     # need to reorder the kernel points according to yhat_new's
     # original order
     reorder_inds <- match(yhat_new, kern_fit$x)
     stopifnot(all.equal(kern_fit$x[reorder_inds], yhat_new))
     mhat <- kern_fit$y[reorder_inds]
-    #kern_diffs <- kern(outer(yhat, yhat_new, `-`))
-    #mhat <- (t(kern_diffs) %*% ys) / colSums(kern_diffs)
     return(mhat)
 }
 
@@ -154,6 +172,7 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
 #'
 #' @return n x p matrix of correlated uniform random variates, where
 #' each row is iid.
+#' @export
 runif_corr <- function(n, corr) {
     stopifnot(diag(corr) == rep(1, nrow(corr)))
     normals <- mvtnorm::rmvnorm(n, sigma = corr)
