@@ -24,6 +24,7 @@ library(dplyr)
 library(data.table)
 library(ggplot2)
 library(cowplot)
+library(xtable)
 
 ```
 
@@ -43,13 +44,29 @@ betas_df <- res_df[!startsWith(coef, "error_"), ]
 
 ```
 
+```{r table-betas, results = "hide"}
+
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8",
+         mean(value < 1e-8),
+         by = .(coef, n, rho1, rho12, rho2, x_dist)] %>%
+    rename(prop_zeros = V1) %>%
+    xtable(digits = 3) %>% print(comment = FALSE)
+
+```
+
 ```{r plot-betas}
 
-plot_betas <- function(betas_df) {
+plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
+    geom <- match.arg(geom)
     p <- ggplot(betas_df,
                 aes(x = as.factor(n), y = value,
-                    color = interaction(rho1, rho12, rho2, sep = ", "))) +
-        geom_boxplot() + facet_grid(x_dist ~ coef)
+                    color = interaction(rho1, rho12, rho2, sep = ", ")))
+    if (geom == "boxplot") {
+        p <- p + geom_boxplot()
+    } else if (geom == "violin") {
+        p <- p + geom_violin()
+    }
+    p <- p + facet_grid(x_dist ~ coef)
     p <- p + scale_color_discrete(name = "(rho1, rho12, rho2)") +
         xlab("n") + ylab("Coefficient Value")
     return(p)
@@ -57,7 +74,7 @@ plot_betas <- function(betas_df) {
 
 # zero betas
 betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8", ] %>%
-    plot_betas() + ggtitle("Zero Betas") +
+    plot_betas(geom = "violin") + ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # nonzero betas
