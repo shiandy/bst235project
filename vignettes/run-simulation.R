@@ -8,7 +8,8 @@ library(doParallel)
 # HELPER FUNCTIONS
 ########################################################################
 
-# Generate an exchangeable correlation matrix.
+# Generate an exchangeable correlation matrix. Diagonal elements are 1,
+# off-diagonal elements are rho
 exch_corr <- function(n, rho) {
     stopifnot(rho < 1)
     ret <- matrix(rho, nrow = n, ncol = n)
@@ -16,7 +17,11 @@ exch_corr <- function(n, rho) {
     return(ret)
 }
 
-# generate block correlation matrix
+# Generate block exchangeable correlation matrix. n1 and n2 are the
+# sizes of the two blocks, so the resultant correlation matrix is (n1 +
+# n2) x (n1 + n2). rho1 is the pairwise correlation in block 1, rho2 is
+# the pairwise correlation in block 2, and rho12 is the correlation
+# between elements in block 1 and block 2.
 block_corr <- function(n1, n2, rho1, rho12, rho2) {
     stopifnot(all(c(rho1, rho12, rho2) < 1))
     block1 <- exch_corr(n1, rho1)
@@ -26,7 +31,9 @@ block_corr <- function(n1, n2, rho1, rho12, rho2) {
     return(ret)
 }
 
-# generate x_simulator for X ~ multivariate normal
+# generate x_simulator for X ~ multivariate normal(0, corr_mat) with
+# covariance matrix corr_mat. (Note this will give marginal X_i ~
+# Normal(0, 1)).
 rmvnorm_generator <- function(corr_mat) {
     ret <- function(n) {
         return(mvtnorm::rmvnorm(n, sigma = corr_mat))
@@ -34,7 +41,7 @@ rmvnorm_generator <- function(corr_mat) {
     return(ret)
 }
 
-# generate x_simulator for X ~ correlated uniform
+# Generate x_simulator for X ~ correlated uniform.
 runif_corr_generator <- function(corr_mat) {
     ret <- function(n) {
         return(runif_corr(n, corr_mat))
@@ -73,6 +80,7 @@ sim_params$rho12 <-
 # file to save the results
 data_csv <- "../data/simdata.csv"
 
+# parallelize
 registerDoParallel(cores = 4)
 #res_df_lst <- vector("list", nrow(sim_params))
 system.time({
@@ -98,6 +106,7 @@ system.time({
         sim_ret <- link_viol_sim(nsims, betas, x_simulator, n,
                                  error_simulator, testsize = 10000)
 
+        # get the result, add data about simulation parameters
         df_cur <- as.data.frame(cbind(sim_ret$betas,
                                       sim_ret$errors))
         df_cur$n <- n
