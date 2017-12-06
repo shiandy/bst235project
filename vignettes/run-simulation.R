@@ -62,7 +62,7 @@ x_dist <- c("normal", "uniform")
 
 n_zeros <- 5
 n_nonzeros <- 3
-betas <- c(3, rep(0, n_zeros), 1, 3, 2)
+betas <- c(3, rep(0, n_zeros), 0.5, 1, 1.5)
 
 error_simulator <- function(n) {
     return(rnorm(n, sd = 1))
