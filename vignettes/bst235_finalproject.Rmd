@@ -1,0 +1,91 @@
+---
+title: "BST 235 Project"
+author: "Andy Shi"
+date: "`r Sys.Date()`"
+output: rmarkdown::pdf_document
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(fig.width = 8, fig.height = 6,
+                      fig.align = "center", message = TRUE,
+                      warning = TRUE, echo = FALSE)
+
+```
+
+```{r libraries, warning = FALSE, message = FALSE, results = "hide"}
+
+library(tidyr)
+library(magrittr)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+
+```
+
+# Methods
+
+# Results
+
+```{r readdata}
+
+res_df <- read.csv("../data/simdata.csv") %>%
+    gather(coef, value, -n, -rho1, -rho12, -rho2, -x_dist) %>%
+    data.table()
+
+errors_df <- res_df[startsWith(coef, "error_"), ] %>% 
+    rename(error = coef)
+betas_df <- res_df[!startsWith(coef, "error_"), ]
+
+```
+
+```{r plot-betas}
+
+plot_betas <- function(betas_df) {
+    p <- ggplot(betas_df,
+                aes(x = as.factor(n), y = value,
+                    color = interaction(rho1, rho12, rho2, sep = ", "))) +
+        geom_boxplot() + facet_grid(x_dist ~ coef)
+    p <- p + scale_color_discrete(name = "(rho1, rho12, rho2)") +
+        xlab("n") + ylab("Coefficient Value")
+    return(p)
+}
+
+# zero betas
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8", ] %>%
+    plot_betas() + ggtitle("Zero Betas") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# nonzero betas
+betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8", ] %>%
+    plot_betas() + ggtitle("Nonzero Betas")
+
+```
+
+```{r plot-alpha, fig.height = 4}
+
+# alpha
+betas_df[coef == "alpha", ] %>%
+    ggplot(aes(x = as.factor(n), y = value,
+               color = interaction(rho1, rho12, rho2, sep = ", "))) +
+    geom_boxplot() + facet_grid(~ x_dist) +
+    scale_color_discrete(name = "(rho1, rho12, rho2)") +
+    xlab("n") + ylab("Coefficient Value") + ggtitle("alpha")
+
+```
+
+```{r plot_errors}
+
+ggplot(errors_df,
+       aes(y = value, color = error,
+           x = interaction(rho1, rho12, rho2, sep = ", "))) +
+    geom_boxplot() + facet_grid(x_dist ~ n) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab("(rho1, rho12, rho2)") + ylab("MSE") +
+    ggtitle("Error Comparison")
+
+```
