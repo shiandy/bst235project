@@ -47,7 +47,7 @@ runif_corr_generator <- function(corr_mat) {
 ########################################################################
 
 # number of simulations to run
-nsims <- 2
+nsims <- 1000
 ns <- c(1000, 10000)
 rho1s <- c(0, 0.3)
 rho2s <- c(0, 0.3)
