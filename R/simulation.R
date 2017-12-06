@@ -187,6 +187,7 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
 #' each row is iid.
 #' @export
 runif_corr <- function(n, corr) {
+    stopifnot(nrow(corr) == ncol(corr))
     stopifnot(diag(corr) == rep(1, nrow(corr)))
     normals <- mvtnorm::rmvnorm(n, sigma = corr)
     unifs <- pnorm(normals)
