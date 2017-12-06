@@ -81,10 +81,12 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
                                         train_dat$xs, train_dat$ys,
                                         alasso_cv)
         # calculate errors
-        errors_cur <- vapply(list(true_preds, naive_preds,
-                                  calibrate_preds),
-                             function(x) { mean((test_dat$ys - x)^2) },
-                             FUN.VALUE = 2.1)
+        # TODO: check for better way to deal with NAs
+        errors_cur <-
+            vapply(list(true_preds, naive_preds, calibrate_preds),
+                   function(x) { mean((test_dat$ys - x)^2,
+                                      na.rm = TRUE) },
+                   FUN.VALUE = 2.1)
         # check the result and save
         betas_cur <- as.vector(alasso_betas)
         stopifnot(!anyNA(betas_cur))
