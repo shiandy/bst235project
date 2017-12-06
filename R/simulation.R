@@ -53,7 +53,11 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
 
     stopifnot(length(betas) > 1)
     betas_est <- matrix(NA, nrow = nsims, ncol = length(betas))
+    colnames(betas_est) <- c("alpha",
+                             paste0("beta", 1:(length(betas) - 1)))
+
     errors <- matrix(NA, nrow = nsims, ncol = 3)
+    colnames(errors) <- c("error_true", "error_linear", "error_kernel")
 
     # only simulate the independent test dataset once
     test_dat <- sim_data(betas, x_simulator, error_simulator, testsize)
@@ -123,7 +127,14 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     yhat <- as.vector(predict(glmnet_obj, xs, s = "lambda.min"))
     yhat_new <- as.vector(predict(glmnet_obj, new_xs, s = "lambda.min"))
     # estimate best bandwidth
-    best_h <- KernSmooth::dpill(yhat, ys)
+    if (sd(yhat) < 1e-6) {
+        #warning("Setting a random bandwidth")
+        # if yhat are all the same, just set some random bandwidth
+        best_h <- 1
+    }
+    else {
+        best_h <- KernSmooth::dpill(yhat, ys)
+    }
     # TODO: sometimes best_h is too small so you'll have points in
     # yhat_new that don't match to yhat, and for those you'll get an NA
     # for your fitted y.
@@ -197,7 +208,7 @@ runif_corr <- function(n, corr) {
 #'
 #' @return A cv.glmnet object
 #'
-adaptive_lasso <- function(xs, ys, gam = 1, nfolds = 10) {
+adaptive_lasso <- function(xs, ys, gam = 1, nfolds = 5) {
     ols_reg <- lm(ys ~ xs)
     beta_ini <- coef(ols_reg)[-1]
     penalty_weights = 1 / (abs(beta_ini)^gam)
