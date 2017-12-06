@@ -1,5 +1,8 @@
 library(bst235Project)
 library(tools)
+library(foreach)
+library(parallel)
+library(doParallel)
 
 ########################################################################
 # HELPER FUNCTIONS
@@ -43,8 +46,6 @@ runif_corr_generator <- function(corr_mat) {
 # SIMULATION SETUP
 ########################################################################
 
-# set random seed for reproducibility
-set.seed(1262)
 # number of simulations to run
 nsims <- 2
 ns <- c(1000, 10000)
@@ -60,8 +61,8 @@ error_simulator <- function(n) {
     return(rnorm(n, sd = 1))
 }
 
-sim_params <- expand.grid(n = ns, rho1 = rho1s, rho2 = rho2s,
-                          x_dist = x_dist)
+sim_params <- expand.grid(rho1 = rho1s, rho2 = rho2s, x_dist = x_dist,
+                          n = ns)
 sim_params$rho12 <-
     ifelse(sim_params$rho1 == 0.3 & sim_params$rho2 == 0.3, 0.3, 0)
 
@@ -72,9 +73,12 @@ sim_params$rho12 <-
 # file to save the results
 data_csv <- "../data/simdata.csv"
 
-res_df_lst <- vector("list", nrow(sim_params))
+registerDoParallel(cores = 4)
+#res_df_lst <- vector("list", nrow(sim_params))
 system.time({
-    for (i in 1:nrow(sim_params)) {
+    res_df <- foreach(i = 1:nrow(sim_params), .combine = rbind,
+                      .packages = c("bst235Project", "tools")) %dopar% {
+        set.seed(1262)
         # extract parameters
         n <- sim_params$n[i]
         rho1 <- sim_params$rho1[i]
@@ -101,10 +105,11 @@ system.time({
         df_cur$rho12 <- rho12
         df_cur$rho2 <- rho2
         df_cur$x_dist <- x_dist
-        res_df_lst[[i]] <- df_cur
+        #res_df_lst[[i]] <- df_cur
+        df_cur
     }
 })
-res_df <- do.call(rbind, res_df_lst)
+#res_df <- do.call(rbind, res_df_lst)
 write.csv(res_df, file = data_csv, row.names = FALSE)
 print(sprintf("Simulation data written to %s, with md5sum of: %s",
               data_csv, md5sum(data_csv)))
