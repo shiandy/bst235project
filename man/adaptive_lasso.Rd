@@ -4,7 +4,7 @@
 \alias{adaptive_lasso}
 \title{Fit adaptive lasso model}
 \usage{
-adaptive_lasso(xs, ys, gam = 1, nfolds = 10)
+adaptive_lasso(xs, ys, gam = 1, nfolds = 5)
 }
 \arguments{
 \item{xs}{Matrix of predictors. Should be standardized and centered
