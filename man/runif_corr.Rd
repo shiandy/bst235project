@@ -4,13 +4,17 @@
 \alias{runif_corr}
 \title{Simulate correlated uniform random variates}
 \usage{
-runif_corr(n, corr)
+runif_corr(n, corr, min = -1, max = 1)
 }
 \arguments{
 \item{n}{Number of random variates to generate.}
 
 \item{corr}{Correlation between the random variates. Must be a p x p
 diagonal matrix, with 1 on the diagonal.}
+
+\item{min}{lower limit of the distribution}
+
+\item{max}{upper limit of the distribution}
 }
 \value{
 n x p matrix of correlated uniform random variates, where
@@ -30,8 +34,7 @@ for i = 1, 2, ... n. Then, we obtain
 
 where F is the standard normal PDF (note marginally, X_{i1} ~ N(0, 1)
 since corr is assumed to have 1 on the diagonals). Then, the U will
-marginally be uniformly distributed on [0, 1], with some
-correlation.
-
-[0, 1]: R:0,%201%5C
+marginally be uniformly distributed on (0, 1), with some correlation.
+Finally, we transform U_{ij} using (max - min) * U_{ij} + min to get
+a random variable uniformly distributed on (min, max).
 }
