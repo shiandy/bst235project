@@ -3,10 +3,9 @@ context("test-fit_true_model.R")
 # setup code
 betas <- c(1, 0, 5)
 x_simulator <- function(n) {
-    mvtnorm::rmvnorm(n, sigma = diag(2))
+    mvtnorm::rmvnorm(n, sigma = diag(1, nrow = 2, ncol = 2))
 }
-nsims <- 10
-n <- 10000
+n <- 100
 
 # simulate data with no errors
 error_simulator0 <- function(n) { 0 }
