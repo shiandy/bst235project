@@ -5,9 +5,10 @@ betas <- c(1, 0, 5)
 x_simulator <- function(n) {
     mvtnorm::rmvnorm(n, sigma = diag(1, nrow = 2, ncol = 2))
 }
-n <- 100
+n <- 500
 
 # simulate data with no errors
+set.seed(1262)
 error_simulator0 <- function(n) { 0 }
 dat0 <- sim_data(betas, x_simulator, error_simulator0, n)
 
