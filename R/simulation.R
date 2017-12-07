@@ -153,7 +153,9 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     #}
     # much faster way of computing the kernel
     kern_fit <- ksmooth(yhat, ys, kernel = "normal",
-                        bandwidth = 10 * best_h, x.points = yhat_new)
+                        bandwidth = best_h, x.points = yhat_new)
+    # raise error if too many NAs
+    stopifnot(mean(is.na(kern_fit$y)) < 0.1)
     # need to reorder the kernel points according to yhat_new's
     # original order
     reorder_inds <- match(yhat_new, kern_fit$x)
@@ -176,21 +178,26 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
 #'
 #' where F is the standard normal PDF (note marginally, X_{i1} ~ N(0, 1)
 #' since corr is assumed to have 1 on the diagonals). Then, the U will
-#' marginally be uniformly distributed on \[0, 1\], with some
-#' correlation.
+#' marginally be uniformly distributed on (0, 1), with some correlation.
+#' Finally, we transform U_{ij} using (max - min) * U_{ij} + min to get
+#' a random variable uniformly distributed on (min, max).
 #'
 #' @param n Number of random variates to generate.
 #' @param corr Correlation between the random variates. Must be a p x p
 #' diagonal matrix, with 1 on the diagonal.
+#' @param min lower limit of the distribution
+#' @param max upper limit of the distribution
 #'
 #' @return n x p matrix of correlated uniform random variates, where
 #' each row is iid.
 #' @export
-runif_corr <- function(n, corr) {
+runif_corr <- function(n, corr, min = -1, max = 1) {
     stopifnot(nrow(corr) == ncol(corr))
     stopifnot(diag(corr) == rep(1, nrow(corr)))
+    stopifnot(min < max)
     normals <- mvtnorm::rmvnorm(n, sigma = corr)
-    unifs <- pnorm(normals)
+    # scale to be between min and max
+    unifs <- (max - min) * pnorm(normals) + min
     return(unifs)
 }
 
