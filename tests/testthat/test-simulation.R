@@ -4,14 +4,14 @@ context("test-simulation.R")
 n_zeros <- 5
 n_nonzeros <- 3
 #betas <- c(3, rep(0, n_zeros), 0.5, 1, 1.5)
-betas <- c(3, rep(0, n_zeros), -0.3, 0.1, 0.3)
+betas <- c(3, rep(0, n_zeros), -0.3, 0.1, 0.5)
 corr_mat <- matrix(0.3, nrow = n_zeros + n_nonzeros,
                    ncol = n_zeros + n_nonzeros)
 diag(corr_mat) <- 1
 x_simulator <- function(n) {
     return(runif_corr(n, corr_mat))
 }
-error_simulator <- function(n) { rnorm(n, sd = 1) }
+error_simulator <- function(n) { rnorm(n, sd = 0.3) }
 nsims <- 5
 n <- 1000
 set.seed(1262)
@@ -34,10 +34,13 @@ test_that("runif_corr has the correct bound", {
 
 
 # debugging simulation
+x_simulator2 <- function(n) {
+    return(mvtnorm::rmvnorm(n, sigma = corr_mat))
+}
 set.seed(1262)
-test_dat <- sim_data(betas, x_simulator, error_simulator,
+test_dat <- sim_data(betas, x_simulator2, error_simulator,
                      n = 10000)
-train_dat <- sim_data(betas, x_simulator, error_simulator, n)
+train_dat <- sim_data(betas, x_simulator2, error_simulator, n)
 alasso_cv <- adaptive_lasso(train_dat$xs, train_dat$ys)
 alasso_betas <- coef(alasso_cv, s = "lambda.min")
 
@@ -49,11 +52,24 @@ true_preds <- true_mod_betas[1] +
 naive_preds <- predict(alasso_cv, newx = test_dat$xs, s = "lambda.min")
 calibrate_preds <- np_calibrate(test_dat$xs, train_dat$xs, train_dat$ys,
                                 alasso_cv)
+errors_cur <- vapply(list(true_preds, naive_preds, calibrate_preds),
+                     function(x) { mean((test_dat$ys - x)^2,
+                                        na.rm = TRUE) }, FUN.VALUE = 2.1)
+errors_cur
+
 par(mfrow = c(2, 2))
+hist(test_dat$ys)
 hist(true_preds)
-plot(true_preds, naive_preds)
-abline(a = 0, b = 1, col = "red", lwd = 2)
-plot(true_preds, calibrate_preds)
-abline(a = 0, b = 1, col = "red", lwd = 2)
+hist(naive_preds)
 hist(calibrate_preds)
+
+plt_lims <- c(min(test_dat$ys), max(test_dat$ys))
+par(mfrow = c(2, 2))
+plot(test_dat$ys, true_preds, ylim = plt_lims)
+abline(a = 0, b = 1, col = "red", lwd = 2)
+plot(test_dat$ys, naive_preds, ylim = plt_lims)
+abline(a = 0, b = 1, col = "red", lwd = 2)
+plot(test_dat$ys, calibrate_preds, ylim = plt_lims)
+abline(a = 0, b = 1, col = "red", lwd = 2)
+hist(test_dat$xs %*% true_mod_betas[-1])
 
