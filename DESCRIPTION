@@ -16,5 +16,6 @@ Suggests:
 Imports: 
     mvtnorm,
     glmnet,
-    KernSmooth
+    KernSmooth,
+    np
 VignetteBuilder: knitr

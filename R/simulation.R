@@ -135,6 +135,11 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj, bandwidth)  {
     # yhat_new that don't match to yhat, and for those you'll get an NA
     # for your fitted y. We ignore these NAs when computing the error.
 
+    # kern_fit <- np::npreg(tydat = as.vector(ys), txdat = yhat,
+    #                       newdata = yhat_new)
+    # mhat <- predict(kern_fit, yhat_new, se.fit = FALSE)
+    # print(kern_fit)
+
     # much faster way of computing the kernel
     kern_fit <- ksmooth(yhat, ys, kernel = "normal",
                         bandwidth = bandwidth, x.points = yhat_new)
