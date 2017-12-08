@@ -4,7 +4,7 @@
 \alias{np_calibrate}
 \title{Nonparametric calibration step for predicting}
 \usage{
-np_calibrate(new_xs, xs, ys, glmnet_obj)
+np_calibrate(new_xs, xs, ys, glmnet_obj, bandwidth)
 }
 \arguments{
 \item{new_xs}{Matrix of new predictors}

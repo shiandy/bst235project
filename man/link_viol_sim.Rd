@@ -6,7 +6,7 @@
 \title{Simulate violations of link function}
 \usage{
 link_viol_sim(nsims, betas, x_simulator, n, error_simulator = rnorm,
-  testsize = 5000)
+  testsize = 5000, cv = FALSE)
 
 sim_data(betas, x_simulator, error_simulator, n)
 }
@@ -27,6 +27,9 @@ n replicates of epsilon. The return value of this function should
 be an n x 1 vector.}
 
 \item{testsize}{Sample size for the simulated validation dataset.}
+
+\item{cv}{Whether to use cross-validation to select the optimal
+bandwidth for nonparametric smoothing step.}
 
 \item{true_link}{True link function. Should be an R function that
 takes one argument.}
