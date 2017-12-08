@@ -1,7 +1,7 @@
 context("test-fit_true_model.R")
 
 # setup code
-betas <- c(1, 0, 5)
+betas <- c(1, 0, 0.3)
 x_simulator <- function(n) {
     mvtnorm::rmvnorm(n, sigma = diag(1, nrow = 2, ncol = 2))
 }
