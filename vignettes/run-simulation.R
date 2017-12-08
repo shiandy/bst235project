@@ -4,9 +4,7 @@ library(foreach)
 library(parallel)
 library(doParallel)
 
-########################################################################
-# HELPER FUNCTIONS
-########################################################################
+# HELPER FUNCTIONS -----------------------------------------------------
 
 # Generate an exchangeable correlation matrix. Diagonal elements are 1,
 # off-diagonal elements are rho
@@ -49,9 +47,9 @@ runif_corr_generator <- function(corr_mat) {
     return(ret)
 }
 
-########################################################################
-# SIMULATION SETUP
-########################################################################
+
+
+# SIMULATION SETUP -----------------------------------------------------
 
 # number of simulations to run
 nsims <- 1000
@@ -73,9 +71,7 @@ sim_params <- expand.grid(rho1 = rho1s, rho2 = rho2s, x_dist = x_dist,
 sim_params$rho12 <-
     ifelse(sim_params$rho1 == 0.3 & sim_params$rho2 == 0.3, 0.3, 0)
 
-########################################################################
-# RUN THE SIMULATION
-########################################################################
+# RUN THE SIMULATION ---------------------------------------------------
 
 # file to save the results
 data_csv <- "../data/simdata.csv"
