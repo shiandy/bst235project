@@ -47,22 +47,29 @@ alasso_betas <- coef(alasso_cv, s = "lambda.min")
 # fit true model
 true_mod_betas <- fit_true_model(train_dat$xs, train_dat$ys)
 
+# get predictions
 true_preds <- true_mod_betas[1] +
     pnorm(test_dat$xs%*% true_mod_betas[-1])
 naive_preds <- predict(alasso_cv, newx = test_dat$xs, s = "lambda.min")
+
+# do calibration predictions
+yhat <- predict(alasso_cv, newx = train_dat$xs, s = "lambda.min")
+best_h <- select_bandwidth(yhat, train_dat$ys, nfolds = 10)
 calibrate_preds <- np_calibrate(test_dat$xs, train_dat$xs, train_dat$ys,
-                                alasso_cv)
+                                alasso_cv, bandwidth = best_h)
 errors_cur <- vapply(list(true_preds, naive_preds, calibrate_preds),
                      function(x) { mean((test_dat$ys - x)^2,
                                         na.rm = TRUE) }, FUN.VALUE = 2.1)
-errors_cur
+print(errors_cur)
 
+# histogram of predicted and true values
 par(mfrow = c(2, 2))
 hist(test_dat$ys)
 hist(true_preds)
 hist(naive_preds)
 hist(calibrate_preds)
 
+# scatterplots
 plt_lims <- c(min(test_dat$ys), max(test_dat$ys))
 par(mfrow = c(2, 2))
 plot(test_dat$ys, true_preds, ylim = plt_lims)
@@ -73,3 +80,22 @@ plot(test_dat$ys, calibrate_preds, ylim = plt_lims)
 abline(a = 0, b = 1, col = "red", lwd = 2)
 hist(test_dat$xs %*% true_mod_betas[-1])
 
+test_that("Cross validation", {
+    skip("Run this yourself... takes too long")
+    system.time({
+        set.seed(1262)
+        sim_res_cv <- link_viol_sim(1000, betas, x_simulator, n,
+                                     error_simulator = error_simulator,
+                                     testsize = 10000, cv = TRUE)
+    })
+    system.time({
+        set.seed(1262)
+        sim_res_nocv <- link_viol_sim(1000, betas, x_simulator, n,
+                                     error_simulator = error_simulator,
+                                     testsize = 10000, cv = FALSE)
+    })
+    boxplot(sim_res_cv$errors)
+    boxplot(sim_res_nocv$errors)
+    apply(sim_res_cv$errors, 2, median)
+    apply(sim_res_nocv$errors, 2, median)
+})

@@ -49,7 +49,8 @@
 #' }
 #' @export
 link_viol_sim <- function(nsims, betas, x_simulator, n,
-                          error_simulator = rnorm, testsize = 5000) {
+                          error_simulator = rnorm, testsize = 5000,
+                          cv = TRUE) {
 
     stopifnot(length(betas) > 1)
     betas_est <- matrix(NA, nrow = nsims, ncol = length(betas))
@@ -77,16 +78,16 @@ link_viol_sim <- function(nsims, betas, x_simulator, n,
         naive_preds <- predict(alasso_cv, newx = test_dat$xs,
                                s = "lambda.min")
         # calibration step
+        yhat <- predict(alasso_cv, newx = train_dat$xs, s = "lambda.min")
+        best_h <- select_bandwidth(yhat, train_dat$ys, cv = cv)
         calibrate_preds <- np_calibrate(test_dat$xs,
                                         train_dat$xs, train_dat$ys,
-                                        alasso_cv)
+                                        alasso_cv, bandwidth = best_h)
         # calculate errors
-        # TODO: check for better way to deal with NAs
         errors_cur <-
             vapply(list(true_preds, naive_preds, calibrate_preds),
                    function(x) { mean((test_dat$ys - x)^2,
-                                      na.rm = TRUE) },
-                   FUN.VALUE = 2.1)
+                                      na.rm = TRUE) }, FUN.VALUE = 2.1)
         # check the result and save
         betas_cur <- as.vector(alasso_betas)
         stopifnot(!anyNA(betas_cur))
@@ -124,26 +125,17 @@ sim_data <- function(betas, x_simulator, error_simulator, n) {
 #' @param glmnet_obj A glmnet object for which there is a predict method
 #'
 #' @return Nonparametrically calibrated predicted means.
-np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
+np_calibrate <- function(new_xs, xs, ys, glmnet_obj, bandwidth)  {
     stopifnot(ncol(xs) == ncol(new_xs))
     yhat <- as.vector(predict(glmnet_obj, xs, s = "lambda.min"))
     yhat_new <- as.vector(predict(glmnet_obj, new_xs, s = "lambda.min"))
-    # estimate best bandwidth
-    if (sd(yhat) < 1e-6) {
-        #warning("Setting a random bandwidth")
-        # if yhat are all the same, just set some random bandwidth
-        best_h <- 1
-    }
-    else {
-        best_h <- KernSmooth::dpill(yhat, ys)
-    }
-    # Note: sometimes best_h is too small so you'll have points in
+    # Note: sometimes bandwidth is too small so you'll have points in
     # yhat_new that don't match to yhat, and for those you'll get an NA
     # for your fitted y. We ignore these NAs when computing the error.
 
     # much faster way of computing the kernel
     kern_fit <- ksmooth(yhat, ys, kernel = "normal",
-                        bandwidth = best_h, x.points = yhat_new)
+                        bandwidth = bandwidth, x.points = yhat_new)
     # raise error if too many NAs
     stopifnot(mean(is.na(kern_fit$y)) < 0.1)
     # need to reorder the kernel points according to yhat_new's
@@ -152,6 +144,44 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     stopifnot(all.equal(kern_fit$x[reorder_inds], yhat_new))
     mhat <- kern_fit$y[reorder_inds]
     return(mhat)
+}
+
+#' Cross-validation for bandwidth
+#'
+select_bandwidth <- function(yhat, ys, cv = FALSE, nfolds = 10) {
+    stopifnot(length(yhat) == length(ys))
+    if (sd(yhat) < 1e-6) {
+        warning("All yhat are the same, returning bandwidth 1")
+        return(1)
+    }
+    start_h <- KernSmooth::dpill(yhat, ys)
+    if (!cv) {
+        return(start_h)
+    }
+    # do cross-validation
+    multipliers <- c(0.25, 0.5, 1, 1.5, 2, 3)
+    h_ranges <- start_h * multipliers
+    fold_ids <- sample(rep(1:nfolds, length.out = length(yhat)))
+
+    mses <- matrix(NA, nrow = nfolds, ncol = length(h_ranges))
+    for (i in 1:nfolds) {
+        test_inds <- which(fold_ids == i)
+        test_yhat <- yhat[test_inds]
+        test_ys <- ys[test_inds][order(test_yhat)]
+
+        train_yhat <- yhat[-test_inds]
+        train_ys <- ys[-test_inds]
+        kern_fits <- lapply(h_ranges, function(h) {
+            ksmooth(train_yhat, train_ys, kernel = "normal",
+                    bandwidth = h, x.points = test_yhat)
+        })
+        mse_cur <- vapply(X = kern_fits, FUN = function(kfit) {
+            mean((kfit$y - test_ys)^2, na.rm = TRUE) }, FUN.VALUE = 0.1)
+        mses[i, ] <- mse_cur
+    }
+    meds <- apply(mses, 2, median)
+    best_h <- h_ranges[which.min(meds)]
+    return(best_h)
 }
 
 #' Simulate correlated uniform random variates
