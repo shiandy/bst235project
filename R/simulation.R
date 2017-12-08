@@ -34,6 +34,8 @@
 #'   n replicates of epsilon. The return value of this function should
 #'   be an n x 1 vector.
 #' @param testsize Sample size for the simulated validation dataset.
+#' @param cv Whether to use cross-validation to select the optimal
+#' bandwidth for nonparametric smoothing step.
 #'
 #' @return \code{link_viol_sim} returns a list with two named elements:
 #' \describe{
@@ -50,7 +52,7 @@
 #' @export
 link_viol_sim <- function(nsims, betas, x_simulator, n,
                           error_simulator = rnorm, testsize = 5000,
-                          cv = TRUE) {
+                          cv = FALSE) {
 
     stopifnot(length(betas) > 1)
     betas_est <- matrix(NA, nrow = nsims, ncol = length(betas))
@@ -159,7 +161,8 @@ select_bandwidth <- function(yhat, ys, cv = FALSE, nfolds = 10) {
         return(start_h)
     }
     # do cross-validation
-    multipliers <- c(0.25, 0.5, 1, 1.5, 2, 3)
+    #multipliers <- c(0.25, 0.5, 1, 1.5, 2, 3)
+    multipliers <- c(0.25, 0.5, 1, 1.5, 2, 3, 5, 10)
     h_ranges <- start_h * multipliers
     fold_ids <- sample(rep(1:nfolds, length.out = length(yhat)))
 
