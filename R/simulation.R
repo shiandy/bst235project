@@ -137,20 +137,10 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj)  {
     else {
         best_h <- KernSmooth::dpill(yhat, ys)
     }
-    # TODO: sometimes best_h is too small so you'll have points in
+    # Note: sometimes best_h is too small so you'll have points in
     # yhat_new that don't match to yhat, and for those you'll get an NA
-    # for your fitted y.
-    # For now, just multiply this by 10.
+    # for your fitted y. We ignore these NAs when computing the error.
 
-    # Find the max over min pairwise distances between the validation
-    # points and training points
-    #diffs <- outer(yhat, yhat_new, function(x, y) { abs(x - y) })
-    #min_diffs <- matrixStats::colMins(diffs)
-    #max_mindiff <- max(min_diffs)
-
-    #if (best_h <= max_mindiff) {
-    #    best_h <- 2 * max_mindiff
-    #}
     # much faster way of computing the kernel
     kern_fit <- ksmooth(yhat, ys, kernel = "normal",
                         bandwidth = best_h, x.points = yhat_new)
