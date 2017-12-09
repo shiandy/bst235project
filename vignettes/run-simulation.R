@@ -53,21 +53,19 @@ runif_corr_generator <- function(corr_mat) {
 
 # number of simulations to run
 nsims <- 1000
-ns <- c(1000, 10000)
+#ns <- c(1000, 10000)
+ns <- c(500, 1000, 5000)
 rho1s <- c(0, 0.3)
 rho2s <- c(0, 0.3)
 x_dist <- c("normal", "uniform")
 
 n_zeros <- 5
-n_nonzeros <- 3
-betas <- c(3, rep(0, n_zeros), 0.5, 1, 1.5)
-
-error_simulator <- function(n) {
-    return(rnorm(n, sd = 1))
-}
+n_nonzeros <- 4
+betas <- c(3, rep(0, n_zeros), -0.3, -0.1, 0.1, 0.3)
+sds <- c(0.01, 0.5)
 
 sim_params <- expand.grid(rho1 = rho1s, rho2 = rho2s, x_dist = x_dist,
-                          n = ns)
+                          n = ns, sd = sds)
 sim_params$rho12 <-
     ifelse(sim_params$rho1 == 0.3 & sim_params$rho2 == 0.3, 0.3, 0)
 
@@ -89,6 +87,11 @@ system.time({
         rho12 <- sim_params$rho12[i]
         rho2 <- sim_params$rho2[i]
         x_dist <- sim_params$x_dist[i]
+        sd <- sim_params$sd[i]
+
+        error_simulator <- function(n) {
+            return(rnorm(n, sd = sd))
+        }
 
         print(sprintf("%s... running iteration %d of %d; n = %d",
               Sys.time(), i, nrow(sim_params), n))
@@ -110,6 +113,7 @@ system.time({
         df_cur$rho12 <- rho12
         df_cur$rho2 <- rho2
         df_cur$x_dist <- x_dist
+        df_cur$sd <- sd
         #res_df_lst[[i]] <- df_cur
         df_cur
     }
