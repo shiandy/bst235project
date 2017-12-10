@@ -10,7 +10,7 @@ vignette: >
 ---
 
 ```{r setup, echo = FALSE}
-knitr::opts_chunk$set(fig.width = 8, fig.height = 6,
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5,
                       fig.align = "center", message = TRUE,
                       warning = TRUE, echo = FALSE)
 
@@ -46,7 +46,7 @@ betas_df <- res_df[!startsWith(coef, "error_"), ]
 
 ```{r table-betas, results = "hide"}
 
-betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8",
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9",
          mean(value < 1e-8),
          by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
     rename(prop_zeros = V1) %>%
@@ -54,7 +54,7 @@ betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8",
 
 ```
 
-```{r plot-betas}
+```{r plot-betas, fig.height = 8, cache = TRUE}
 
 plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
     geom <- match.arg(geom)
@@ -73,12 +73,12 @@ plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
 }
 
 # zero betas
-betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8", ] %>%
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9", ] %>%
     plot_betas(geom = "violin") + ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # nonzero betas
-betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8", ] %>%
+betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ] %>%
     plot_betas() + ggtitle("Nonzero Betas")
 
 ```
@@ -95,7 +95,7 @@ betas_df[coef == "alpha", ] %>%
 
 ```
 
-```{r plot_errors}
+```{r plot_errors, fig.height = 7}
 
 ggplot(errors_df,
        aes(y = value, color = error,
@@ -110,20 +110,25 @@ ggplot(errors_df,
 
 # Exploration of Results
 
-```{r exploration-setup, eval = FALSE}
+```{r exploration-setup}
+betas <- c(1, 0, 0, 0, 0, 0, -0.3, -0.1, 0.1, 0.3)
+corr_mat <- matrix(0.3, nrow = 9, ncol = 9)
+diag(corr_mat) <- 1
+n <- 1000
+
 x_simulator2 <- function(n) {
     return(mvtnorm::rmvnorm(n, sigma = corr_mat))
 }
 
+
 test_simulation <- function(sd) {
-    error_simulator <- function(n) { rnorm(n, sd = sd) }
+    error_simulator <- function(n) { rnorm(n, mean = 0, sd = sd) }
     test_dat <- bst235Project:::sim_data(betas, x_simulator2,
                                          error_simulator, n = 10000)
     train_dat <- bst235Project:::sim_data(betas, x_simulator2,
                                           error_simulator, n)
     alasso_cv <- bst235Project:::adaptive_lasso(train_dat$xs,
                                                 train_dat$ys)
-    alasso_betas <- coef(alasso_cv, s = "lambda.min")
     # fit true model
     true_mod_betas <- bst235Project:::fit_true_model(train_dat$xs,
                                                      train_dat$ys)
@@ -135,101 +140,111 @@ test_simulation <- function(sd) {
                            s = "lambda.min")
 
     # do calibration predictions
-    best_h <- bst235Project:::select_bandwidth(yhat, train_dat$ys,
+    train_yhat <- predict(alasso_cv, newx = train_dat$xs,
+                          s = "lambda.min")
+    best_h <- bst235Project:::select_bandwidth(train_yhat, train_dat$ys,
                                                nfolds = 10, cv = FALSE)
     calibrate_preds <-
         bst235Project:::np_calibrate(test_dat$xs, train_dat$xs,
                                      train_dat$ys, alasso_cv,
                                      bandwidth = best_h)
     # get beta %*% x on training data for adaptive lasso
-    train_yhat <- predict(alasso_cv, newx = train_dat$xs,
-                          s = "lambda.min")
     ret <- list(test_ys = test_dat$ys,
                 true_preds = true_preds,
                 naive_preds = naive_preds,
                 calibrate_preds = calibrate_preds,
                 train_yhat = train_yhat,
                 train_ys = train_dat$ys)
+    return(ret)
 }
 
-plot_hists <- function(testsim_obj, title = "") {
-    # par(mfrow = c(2, 2), mar=c(3, 3, 1, 1), oma=c(0, 0, 3, 1))
+plot_hists <- function(testsim_obj) {
     par(mfrow = c(2, 2))
     hist(testsim_obj$test_ys, breaks = 50,
-         main = "True Y")
+         main = "True Y", xlab = "True Y")
     hist(testsim_obj$true_preds, breaks = 50,
-         main = "True Model Predictions")
+         main = "True Model Predictions",
+         xlab = "True Model Predictions")
     hist(testsim_obj$naive_preds, breaks = 50,
-         main = "ALASSO Predictions")
+         main = "ALASSO Predictions", xlab = "ALASSO Predictions")
     hist(testsim_obj$calibrate_preds, breaks = 50,
-         main = "Calibrated Predictions")
-    #mtext(title, side=3, line=1, outer=TRUE, cex=1.5, font=2)
+         main = "Calibrated Predictions",
+         xlab = "ALASSO Predictions")
 }
 
-plot_yhat_resids <- function(testsim_obj) {
-    par(mfrow = c(2, 1))
-    plot(testsim_obj$train_yhat, testsim_obj$train_ys,
-         pch = 20, col = rgb(0, 0, 0, 0.3))
-    abline(a = 0, b = 1, col = "red", lwd = 2)
-    resids <- testsim_obj$train_ys - testsim_obj$train_yhat
-    plot(testsim_obj$train_yhat, resids, pch = 20,
-         col = rgb(0, 0, 0, 0.3))
-}
-
-plot_kernel_diag <- function(testsim_obj) {
-    par(mfrow = c(2, 1))
-    plot(testsim_obj$naive_preds, testsim_obj$test_ys,
-         pch = 20, col = rgb(0, 0, 0, 0.3))
-    lines(testsim_obj$naive_preds[order(testsim_obj$naive_preds)],
-          testsim_obj$calibrate_preds[order(testsim_obj$naive_preds)],
-          col = "red", lwd = 2)
-    hist(testsim_obj$train_yhat)
-}
-
-plot_preds <- function(testsim_obj) {
-    plt_lims <- c(min(testsim_obj$test_ys), max(testsim_obj$test_ys))
-    par(mfrow = c(2, 2))
-    plot(testsim_obj$test_ys, testsim_obj$true_preds, ylim = plt_lims,
-         pch = 20, col = rgb(0, 0, 0, 0.2))
-    abline(a = 0, b = 1, col = "red", lwd = 2)
-    plot(testsim_obj$test_ys, testsim_obj$naive_preds, ylim = plt_lims,
-         pch = 20, col = rgb(0, 0, 0, 0.2))
-    abline(a = 0, b = 1, col = "red", lwd = 2)
-    plot(testsim_obj$test_ys, testsim_obj$calibrate_preds,
-         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2))
-    abline(a = 0, b = 1, col = "red", lwd = 2)
-}
-```
-
-```{r, eval = FALSE}
 set.seed(1262)
 testsim_smallerr <- test_simulation(sd = 0.01)
-testsim_bigerr <- test_simulation(sd = 0.5)
+testsim_bigerr <- test_simulation(sd = 0.3)
 
-plot_hists(testsim_smallerr, title = "Small Errors")
-plot_hists(testsim_bigerr, title = "Big Errors")
+testsim_lst <- list(testsim_smallerr, testsim_bigerr)
+title_lst <- c("Small Error", "Big Error")
+```
 
-plot_yhat_resids(testsim_smallerr)
-plot_yhat_resids(testsim_bigerr)
+```{r exploration-hists, fig.height = 5, cache = TRUE}
+plot_hists(testsim_smallerr)
+plot_hists(testsim_bigerr)
+```
 
-plot_kernel_diag(testsim_bigerr)
-plot_kernel_diag(testsim_smallerr)
+```{r exploration-resids, fig.height = 6, cache = TRUE}
+par(mfcol = c(2, 2))
+for (i in 1:2) {
+    plot(testsim_lst[[i]]$train_yhat, testsim_lst[[i]]$train_ys,
+         pch = 20, col = rgb(0, 0, 0, 0.3),
+         xlab = "Train Y_hat (ALASSO)", ylab = "Train Y",
+         main = paste0("Y vs. Y_hat, ", title_lst[i]))
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+    plot(testsim_lst[[i]]$train_yhat,
+         testsim_lst[[i]]$train_ys - testsim_lst[[i]]$train_yhat,
+         pch = 20, col = rgb(0, 0, 0, 0.3),
+         xlab = "Train Y_hat (ALASSO)", ylab = "Train Residual",
+         main = paste0("Residual, ", title_lst[i]))
+}
 
-plot_preds(testsim_smallerr)
-plot_preds(testsim_bigerr)
+```
 
+```{r exploration-kernel, fig.height = 4, cache = TRUE}
+par(mfcol = c(1, 2))
+for (i in 1:2) {
+    plot(testsim_lst[[i]]$naive_preds, testsim_lst[[i]]$test_ys,
+         pch = 20, col = rgb(0, 0, 0, 0.3),
+         xlab = "ALASSO prediction on test", ylab = "True test Y",
+         main = paste0("Kernel Predictions, ", title_lst[i]))
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+}
+
+```
+
+```{r exploration-preds, fig.height = 8, cache = TRUE}
+par(mfcol = c(3, 2))
+for (i in 1:2) {
+    plt_lims <- c(min(testsim_lst[[i]]$test_ys),
+                  max(testsim_lst[[i]]$test_ys))
+    plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$true_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True test Y", ylab = "True model prediction",
+         main = title_lst[i])
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+    plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$naive_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True test Y", ylab = "ALASSO prediction")
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+    plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$calibrate_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True test Y", ylab = "Kernel prediction")
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+}
 ```
 
 ```{r test-cv, eval = FALSE}
 system.time({
     set.seed(1262)
-    sim_res_cv <- link_viol_sim(1000, betas, x_simulator, n,
+    sim_res_cv <- link_viol_sim(1000, betas, x_simulator2, n,
                                  error_simulator = error_simulator,
                                  testsize = 10000, cv = TRUE)
 })
 system.time({
     set.seed(1262)
-    sim_res_nocv <- link_viol_sim(1000, betas, x_simulator, n,
+    sim_res_nocv <- link_viol_sim(1000, betas, x_simulator2, n,
                                  error_simulator = error_simulator,
                                  testsize = 10000, cv = FALSE)
 })
