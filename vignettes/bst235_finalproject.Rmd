@@ -49,12 +49,12 @@ betas_df <- res_df[!startsWith(coef, "error_"), ]
 betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9",
          mean(value < 1e-8),
          by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
-    rename(prop_zeros = V1) %>%
-    xtable(digits = 3) %>% print(comment = FALSE)
+    rename(prop_zeros = V1)#%>%
+    #xtable(digits = 3) %>% print(comment = FALSE)
 
 ```
 
-```{r plot-betas, fig.height = 8, cache = TRUE}
+```{r zero-betas, fig.height = 8, cache = TRUE}
 
 plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
     geom <- match.arg(geom)
@@ -77,6 +77,10 @@ betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" &
     plot_betas(geom = "violin") + ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+```
+
+```{r nonzero-betas, fig.height = 8, cache = TRUE}
+
 # nonzero betas
 betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ] %>%
     plot_betas() + ggtitle("Nonzero Betas")
@@ -95,7 +99,7 @@ betas_df[coef == "alpha", ] %>%
 
 ```
 
-```{r plot_errors, fig.height = 7}
+```{r plot-errors, fig.height = 7}
 
 ggplot(errors_df,
        aes(y = value, color = error,
@@ -205,16 +209,20 @@ for (i in 1:2) {
 ```{r exploration-kernel, fig.height = 4, cache = TRUE}
 par(mfcol = c(1, 2))
 for (i in 1:2) {
-    plot(testsim_lst[[i]]$naive_preds, testsim_lst[[i]]$test_ys,
-         pch = 20, col = rgb(0, 0, 0, 0.3),
+    naive_preds <- testsim_lst[[i]]$naive_preds
+    test_ys <- testsim_lst[[i]]$test_ys
+    calibrate_preds <- testsim_lst[[i]]$calibrate_preds
+    plot(naive_preds, test_ys, pch = 20, col = rgb(0, 0, 0, 0.3),
          xlab = "ALASSO prediction on test", ylab = "True test Y",
          main = paste0("Kernel Predictions, ", title_lst[i]))
-    abline(a = 0, b = 1, col = "red", lwd = 2)
+    lines(naive_preds[order(naive_preds)],
+          calibrate_preds[order(naive_preds)],
+          col = "red", lwd = 2)
 }
 
 ```
 
-```{r exploration-preds, fig.height = 8, cache = TRUE}
+```{r exploration-preds, fig.height = 9, cache = TRUE}
 par(mfcol = c(3, 2))
 for (i in 1:2) {
     plt_lims <- c(min(testsim_lst[[i]]$test_ys),
@@ -222,15 +230,17 @@ for (i in 1:2) {
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$true_preds,
          ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
          xlab = "True test Y", ylab = "True model prediction",
-         main = title_lst[i])
+         main = paste0("True Model, ", title_lst[i]))
     abline(a = 0, b = 1, col = "red", lwd = 2)
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$naive_preds,
          ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
-         xlab = "True test Y", ylab = "ALASSO prediction")
+         xlab = "True test Y", ylab = "ALASSO prediction",
+         main = paste0("ALASSO, ", title_lst[i]))
     abline(a = 0, b = 1, col = "red", lwd = 2)
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$calibrate_preds,
          ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
-         xlab = "True test Y", ylab = "Kernel prediction")
+         xlab = "True test Y", ylab = "Kernel prediction",
+         main = paste0("Kernel, ", title_lst[i]))
     abline(a = 0, b = 1, col = "red", lwd = 2)
 }
 ```
