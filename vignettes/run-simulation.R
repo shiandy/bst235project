@@ -78,7 +78,7 @@ registerDoParallel(cores = 4)
 system.time({
     res_df <- foreach(i = 1:nrow(sim_params), .combine = rbind,
                       .packages = c("bst235Project", "tools")) %dopar% {
-        set.seed(1262)
+        set.seed(1263)
         # extract parameters
         n <- sim_params$n[i]
         rho1 <- sim_params$rho1[i]
