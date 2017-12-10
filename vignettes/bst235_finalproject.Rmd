@@ -164,14 +164,15 @@ test_simulation <- function(sd) {
 
 plot_hists <- function(testsim_obj) {
     par(mfrow = c(2, 2))
-    hist(testsim_obj$test_ys, breaks = 50,
+    xlims <- range(testsim_obj$test_ys)
+    hist(testsim_obj$test_ys, breaks = 50, xlim = xlims,
          main = "True Y", xlab = "True Y")
-    hist(testsim_obj$true_preds, breaks = 50,
+    hist(testsim_obj$true_preds, breaks = 50, xlim = xlims,
          main = "True Model Predictions",
          xlab = "True Model Predictions")
-    hist(testsim_obj$naive_preds, breaks = 50,
+    hist(testsim_obj$naive_preds, breaks = 50, xlim = xlims,
          main = "ALASSO Predictions", xlab = "ALASSO Predictions")
-    hist(testsim_obj$calibrate_preds, breaks = 50,
+    hist(testsim_obj$calibrate_preds, breaks = 50, xlim = xlims,
          main = "Calibrated Predictions",
          xlab = "ALASSO Predictions")
 }
@@ -225,8 +226,7 @@ for (i in 1:2) {
 ```{r exploration-preds, fig.height = 9, cache = TRUE}
 par(mfcol = c(3, 2))
 for (i in 1:2) {
-    plt_lims <- c(min(testsim_lst[[i]]$test_ys),
-                  max(testsim_lst[[i]]$test_ys))
+    plt_lims <- range(testsim_lst[[i]]$test_ys)
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$true_preds,
          ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
          xlab = "True test Y", ylab = "True model prediction",
