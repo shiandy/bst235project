@@ -162,6 +162,10 @@ select_bandwidth <- function(yhat, ys, cv = FALSE, nfolds = 10) {
         return(1)
     }
     start_h <- KernSmooth::dpill(yhat, ys)
+    if (is.nan(start_h)){
+        warning("dpill gave NaN, setting start_h to 0.1")
+        start_h <- 0.1
+    }
     if (!cv) {
         return(start_h)
     }
