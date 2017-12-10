@@ -47,8 +47,6 @@ runif_corr_generator <- function(corr_mat) {
     return(ret)
 }
 
-
-
 # SIMULATION SETUP -----------------------------------------------------
 
 # number of simulations to run
@@ -62,7 +60,7 @@ x_dist <- c("normal", "uniform")
 n_zeros <- 5
 n_nonzeros <- 4
 betas <- c(3, rep(0, n_zeros), -0.3, -0.1, 0.1, 0.3)
-sds <- c(0.01, 0.5)
+sds <- c(0.01, 0.3)
 
 sim_params <- expand.grid(rho1 = rho1s, rho2 = rho2s, x_dist = x_dist,
                           n = ns, sd = sds)
@@ -95,8 +93,7 @@ system.time({
 
         print(sprintf("%s... running iteration %d of %d; n = %d",
               Sys.time(), i, nrow(sim_params), n))
-        corr_mat <- block_corr(n_zeros, n_nonzeros, rho1, rho12,
-                               rho2)
+        corr_mat <- block_corr(n_zeros, n_nonzeros, rho1, rho12, rho2)
         if (x_dist == "normal") {
             x_simulator <- rmvnorm_generator(corr_mat)
         } else if (x_dist == "uniform") {
@@ -106,8 +103,7 @@ system.time({
                                  error_simulator, testsize = 10000)
 
         # get the result, add data about simulation parameters
-        df_cur <- as.data.frame(cbind(sim_ret$betas,
-                                      sim_ret$errors))
+        df_cur <- as.data.frame(cbind(sim_ret$betas, sim_ret$errors))
         df_cur$n <- n
         df_cur$rho1 <- rho1
         df_cur$rho12 <- rho12
