@@ -1,4 +1,6 @@
 library(bst235Project)
+library(purrr)
+library(mvtnorm)
 library(tools)
 library(foreach)
 library(parallel)
@@ -29,23 +31,20 @@ block_corr <- function(n1, n2, rho1, rho12, rho2) {
     return(ret)
 }
 
-# generate x_simulator for X ~ multivariate normal(0, corr_mat) with
-# covariance matrix corr_mat. (Note this will give marginal X_i ~
-# Normal(0, 1)).
-rmvnorm_generator <- function(corr_mat) {
-    ret <- function(n) {
-        return(mvtnorm::rmvnorm(n, sigma = corr_mat))
-    }
-    return(ret)
+rmvnorm_mixture <- function(n, mu1, mu2, corr_mat1, corr_mat2) {
+    n1 <- n/2
+    n2 <- n/2
+    xs1 <- mvtnorm::rmvnorm(n1, mean = mu1, sigma = corr_mat1)
+    xs2 <- mvtnorm::rmvnorm(n2, mean = mu2, sigma = corr_mat2)
+    return(rbind(xs1, xs2))
 }
 
-# Generate x_simulator for X ~ correlated uniform.
-runif_corr_generator <- function(corr_mat) {
-    ret <- function(n) {
-        return(runif_corr(n, corr_mat))
-    }
-    return(ret)
-}
+# corr_mat_test <- matrix(0.3, nrow = 2, ncol = 2)
+# diag(corr_mat_test) <- 1
+# xs <- rmvnorm_mixture(10000, rep(-5, 2), rep(5, 2), corr_mat_test,
+#                       corr_mat_test)
+# ggplot(data.table(xs), aes(x = V1, y = V2)) + geom_density2d()
+# qplot(x = pnorm(xs %*% c(-0.3, 0.3)), geom = "histogram", bins = 20)
 
 # SIMULATION SETUP -----------------------------------------------------
 
@@ -55,7 +54,7 @@ nsims <- 1000
 ns <- c(500, 1000, 5000)
 rho1s <- c(0, 0.3)
 rho2s <- c(0, 0.3)
-x_dist <- c("normal", "uniform")
+x_dist <- c("normal", "uniform", "mixture")
 
 n_zeros <- 5
 n_nonzeros <- 4
@@ -76,8 +75,9 @@ data_csv <- "../data/simdata.csv"
 registerDoParallel(cores = 4)
 #res_df_lst <- vector("list", nrow(sim_params))
 system.time({
-    res_df <- foreach(i = 1:nrow(sim_params), .combine = rbind,
-                      .packages = c("bst235Project", "tools")) %dopar% {
+    res_df <- foreach(i = 1:nrow(sim_params),
+                      .packages = c("bst235Project", "tools", "purrr"),
+                      .combine = rbind) %dopar% {
         set.seed(1263)
         # extract parameters
         n <- sim_params$n[i]
@@ -95,9 +95,15 @@ system.time({
               Sys.time(), i, nrow(sim_params), n))
         corr_mat <- block_corr(n_zeros, n_nonzeros, rho1, rho12, rho2)
         if (x_dist == "normal") {
-            x_simulator <- rmvnorm_generator(corr_mat)
+            x_simulator <- partial(rmvnorm, sigma = corr_mat)
         } else if (x_dist == "uniform") {
-            x_simulator <- runif_corr_generator(corr_mat)
+            x_simulator <- partial(runif_corr, corr = corr_mat)
+        } else if (x_dist == "mixture") {
+            p <- length(betas) - 1
+            x_simulator <- partial(rmvnorm_mixture, mu1 = rep(-5, p),
+                                   mu2 = rep(5, p),
+                                   corr_mat1 = corr_mat,
+                                   corr_mat2 = corr_mat)
         }
         sim_ret <- link_viol_sim(nsims, betas, x_simulator, n,
                                  error_simulator, testsize = 10000)
