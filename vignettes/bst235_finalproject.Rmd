@@ -104,10 +104,15 @@ betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", 
 ```{r nonzero-betas-prop}
 
 selected_betas <- betas_df[n == 5000 & sd > 0.1 & rho1 == 0.3 & rho2 == 0.3 & coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ]
+selected_betas[coef == "beta6", ratio := value / -0.3]
+selected_betas[coef == "beta7", ratio := value / -0.1]
+selected_betas[coef == "beta8", ratio := value / 0.1]
+selected_betas[coef == "beta9", ratio := value / 0.3]
+
 ggplot(selected_betas,
-       aes(x = x_dist, y = value, color = x_dist)) +
+       aes(x = x_dist, y = ratio, color = x_dist)) +
     geom_boxplot() + facet_grid(~coef) +
-    xlab("Distribution of X") + ylab("Coefficient Value") +
+    xlab("Distribution of X") + ylab("Coefficient Value / True Value") +
     guides(color = FALSE)
 
 ```
