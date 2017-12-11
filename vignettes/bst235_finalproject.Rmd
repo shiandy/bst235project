@@ -52,10 +52,21 @@ betas_zeros <- betas_df[coef != "alpha" & coef != "beta6" & coef !=
     #xtable(digits = 3) %>% print(comment = FALSE)
 hist(betas_zeros$prop_zeros, xlab = "Proportion of Zero Betas = 0",
      main = "Proportion of Zero Betas = 0")
+all(betas_zeros[n == 5000 & sd == 0.01, prop_zeros] == 1)
+all(betas_nonzeros[n == 5000 & sd == 0.01, prop_nonzeros] == 1)
+betas_zeros[n == 5000 & sd == 0.3, ] %>%
+    ggplot(aes(x = coef, y = prop_zeros, color = x_dist)) +
+    geom_boxplot() +
+    geom_point(position = position_dodge(width = 0.75),
+               aes(group = x_dist), alpha = 0.5) +
+    xlab("Coefficient") + ylab("Proportion Zero") +
+    scale_color_discrete(name = "Covariate Distribution") +
+    ggtitle("Proportion of Zeros Among True Zero Coefficients, n = 5000, sd = 0.3")
+
 
 ```
 
-```{r prop-nonzeros}
+```{r prop-nonzeros, results = "hide"}
 
 betas_nonzeros <- betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", mean(abs(value) > 1e-8), by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
     dplyr::rename(prop_nonzeros = V1)#%>%
@@ -63,6 +74,13 @@ betas_nonzeros <- betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" |
 hist(betas_nonzeros$prop_nonzeros,
      xlab = "Proportion of Nonzero Betas != 0",
      main = "Proportion of Nonzero Betas != 0")
+
+hist(betas_nonzeros[n == 5000 & sd == 0.3, prop_nonzeros], yaxt = 'n',
+     main = "Prop. of Nonzeros Among True Nonzero Coefficients, n = 5000, sd = 0.3",
+     xlab = "Proportion of Nonzeros")
+axis(side = 2, at = seq(0, 50, 2), labels = seq(0, 50, 2))
+
+betas_nonzeros[n == 5000 & sd == 0.3, ]
 
 ```
 
@@ -73,7 +91,7 @@ betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" &
                color = interaction(rho1, rho12, rho2, sep = ", "))) +
     geom_violin() + facet_grid(x_dist ~ as.factor(sd) + coef) +
     scale_color_discrete(name = "(rho1, rho12, rho2)") +
-    xlab("n") + ylab("Coefficient Value / True Value") +
+    xlab("n") + ylab("Coefficient Value") +
     ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -105,7 +123,8 @@ ggplot(selected_betas,
        aes(x = x_dist, y = ratio, color = x_dist)) +
     geom_boxplot() + facet_grid(~coef) +
     xlab("Distribution of X") + ylab("Coefficient Value / True Value") +
-    guides(color = FALSE)
+    guides(color = FALSE) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
@@ -129,13 +148,16 @@ p_small <- errors_df[sd == 0.01 & rho1 == 0.3 & rho2 == 0.3,] %>%
     ggplot(aes(y = value, color = error, x = as.factor(n))) +
     geom_boxplot() + facet_grid(~ x_dist) +
     xlab("n") + ylab("MSE") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ggtitle("Error Comparison, Small Errors, rho1 = rho12 = rho3 = 0.3")
+
 
 p_large <- errors_df[sd > 0.1 & rho1 == 0.3 & rho2 == 0.3,] %>%
     ggplot(aes(y = value, color = error,
                x = as.factor(n))) +
     geom_boxplot() + facet_grid(~ x_dist) +
     xlab("n") + ylab("MSE") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ggtitle("Error Comparison, Big Errors, rho1 = rho12 = rho3 = 0.3")
 plot_grid(p_small, p_large, nrow = 1)
 
@@ -188,6 +210,7 @@ test_simulation <- function(sd) {
                                                      train_dat$ys)
 
     # get predictions
+    true_condmean <- betas[1] + pnorm(test_dat$xs %*% betas[-1])
     true_preds <- true_mod_betas[1] +
         pnorm(test_dat$xs%*% true_mod_betas[-1])
     naive_preds <- predict(alasso_cv, newx = test_dat$xs,
@@ -202,8 +225,8 @@ test_simulation <- function(sd) {
         bst235Project:::np_calibrate(test_dat$xs, train_dat$xs,
                                      train_dat$ys, alasso_cv,
                                      bandwidth = best_h)
-    # get beta %*% x on training data for adaptive lasso
     ret <- list(test_ys = test_dat$ys,
+                true_condmean = true_condmean,
                 true_preds = true_preds,
                 naive_preds = naive_preds,
                 calibrate_preds = calibrate_preds,
@@ -290,6 +313,29 @@ for (i in 1:2) {
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$calibrate_preds,
          ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
          xlab = "True test Y", ylab = "Kernel prediction",
+         main = paste0("Kernel, ", title_lst[i]))
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+}
+```
+
+```{r exploration-true-cond-means, fig.height = 7, cache = TRUE}
+par(mfrow = c(2, 3))
+for (i in 1:2) {
+    plt_lims <- range(testsim_lst[[i]]$true_condmean)
+    plot(testsim_lst[[i]]$true_condmean, testsim_lst[[i]]$true_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True Conditional Mean", ylab = "True model prediction",
+         main = paste0("True Model, ", title_lst[i]))
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+    plot(testsim_lst[[i]]$true_condmean, testsim_lst[[i]]$naive_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True Conditional Mean", ylab = "ALASSO prediction",
+         main = paste0("ALASSO, ", title_lst[i]))
+    abline(a = 0, b = 1, col = "red", lwd = 2)
+    plot(testsim_lst[[i]]$true_condmean,
+         testsim_lst[[i]]$calibrate_preds,
+         ylim = plt_lims, pch = 20, col = rgb(0, 0, 0, 0.2),
+         xlab = "True Conditional Mean", ylab = "Kernel prediction",
          main = paste0("Kernel, ", title_lst[i]))
     abline(a = 0, b = 1, col = "red", lwd = 2)
 }
