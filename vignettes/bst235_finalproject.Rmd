@@ -67,35 +67,31 @@ hist(betas_nonzeros$prop_nonzeros,
 ```
 
 ```{r zero-betas, fig.height = 7, fig.width = 12, cache = TRUE}
-
-plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
-    geom <- match.arg(geom)
-    p <- ggplot(betas_df,
-                aes(x = as.factor(n), y = value,
-                    color = interaction(rho1, rho12, rho2, sep = ", ")))
-    if (geom == "boxplot") {
-        p <- p + geom_boxplot()
-    } else if (geom == "violin") {
-        p <- p + geom_violin()
-    }
-    p <- p + facet_grid(x_dist ~ as.factor(sd) + coef)
-    p <- p + scale_color_discrete(name = "(rho1, rho12, rho2)") +
-        xlab("n") + ylab("Coefficient Value")
-    return(p)
-}
-
 # zero betas
 betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9" & sd > 0.1, ] %>%
-    plot_betas(geom = "violin") + ggtitle("Zero Betas") +
+    ggplot(aes(x = as.factor(n), y = value,
+               color = interaction(rho1, rho12, rho2, sep = ", "))) +
+    geom_violin() + facet_grid(x_dist ~ as.factor(sd) + coef) +
+    scale_color_discrete(name = "(rho1, rho12, rho2)") +
+    xlab("n") + ylab("Coefficient Value / True Value") +
+    ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
-```{r nonzero-betas, fig.height = 7, fig.width = 12, cache = TRUE}
-
+```{r nonzero-betas, fig.height = 7, fig.width = 12}
 # nonzero betas
+betas_df[coef == "beta6", ratio := value / -0.3]
+betas_df[coef == "beta7", ratio := value / -0.1]
+betas_df[coef == "beta8", ratio := value / 0.1]
+betas_df[coef == "beta9", ratio := value / 0.3]
 betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ] %>%
-    plot_betas() + ggtitle("Nonzero Betas") +
+    ggplot(aes(x = as.factor(n), y = ratio,
+               color = interaction(rho1, rho12, rho2, sep = ", "))) +
+    geom_boxplot() + facet_grid(x_dist ~ as.factor(sd) + coef) +
+    scale_color_discrete(name = "(rho1, rho12, rho2)") +
+    xlab("n") + ylab("Coefficient Value / True Value") +
+    ggtitle("Nonzero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     geom_hline(aes(yintercept = 0))
 
@@ -104,10 +100,6 @@ betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", 
 ```{r nonzero-betas-prop}
 
 selected_betas <- betas_df[n == 5000 & sd > 0.1 & rho1 == 0.3 & rho2 == 0.3 & coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ]
-selected_betas[coef == "beta6", ratio := value / -0.3]
-selected_betas[coef == "beta7", ratio := value / -0.1]
-selected_betas[coef == "beta8", ratio := value / 0.1]
-selected_betas[coef == "beta9", ratio := value / 0.3]
 
 ggplot(selected_betas,
        aes(x = x_dist, y = ratio, color = x_dist)) +
@@ -120,12 +112,14 @@ ggplot(selected_betas,
 ```{r plot-alpha, fig.height = 4}
 
 # alpha
+betas_df[coef == "alpha", ratio := value / 3]
 betas_df[coef == "alpha", ] %>%
-    ggplot(aes(x = as.factor(n), y = value,
+    ggplot(aes(x = as.factor(n), y = ratio,
                color = interaction(rho1, rho12, rho2, sep = ", "))) +
     geom_boxplot() + facet_grid(as.factor(sd) ~ x_dist) +
     scale_color_discrete(name = "(rho1, rho12, rho2)") +
-    xlab("n") + ylab("Coefficient Value") + ggtitle("alpha")
+    xlab("n") + ylab("Coefficient Value / True Value") +
+    ggtitle("alpha")
 
 ```
 
