@@ -18,9 +18,7 @@ knitr::opts_chunk$set(fig.width = 8, fig.height = 5,
 
 ```{r libraries, warning = FALSE, message = FALSE, results = "hide"}
 
-library(tidyr)
 library(magrittr)
-library(dplyr)
 library(data.table)
 library(ggplot2)
 library(cowplot)
@@ -35,26 +33,40 @@ library(xtable)
 ```{r readdata}
 
 res_df <- read.csv("../data/simdata.csv") %>%
-    gather(coef, value, -n, -rho1, -rho12, -rho2, -x_dist, -sd) %>%
+    tidyr::gather(coef, value, -n, -rho1, -rho12, -rho2, -x_dist, -sd) %>%
     data.table()
 
 errors_df <- res_df[startsWith(coef, "error_"), ] %>%
-    rename(error = coef)
+    dplyr::rename(error = coef)
 betas_df <- res_df[!startsWith(coef, "error_"), ]
 
 ```
 
-```{r table-betas, results = "hide"}
+```{r prop-zeros}
 
-betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9",
-         mean(value < 1e-8),
-         by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
-    rename(prop_zeros = V1)#%>%
+betas_zeros <- betas_df[coef != "alpha" & coef != "beta6" & coef !=
+                      "beta7" & coef != "beta8" & coef != "beta9",
+                  mean(value < 1e-8), by = .(coef, n, rho1, rho12, rho2,
+                                             x_dist, sd)] %>%
+    dplyr::rename(prop_zeros = V1)#%>%
     #xtable(digits = 3) %>% print(comment = FALSE)
+hist(betas_zeros$prop_zeros, xlab = "Proportion of Zero Betas = 0",
+     main = "Proportion of Zero Betas = 0")
 
 ```
 
-```{r zero-betas, fig.height = 8, cache = TRUE}
+```{r prop-nonzeros}
+
+betas_nonzeros <- betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", mean(abs(value) > 1e-8), by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
+    dplyr::rename(prop_nonzeros = V1)#%>%
+    #xtable(digits = 3) %>% print(comment = FALSE)
+hist(betas_nonzeros$prop_nonzeros,
+     xlab = "Proportion of Nonzero Betas != 0",
+     main = "Proportion of Nonzero Betas != 0")
+
+```
+
+```{r zero-betas, fig.height = 7, fig.width = 12, cache = TRUE}
 
 plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
     geom <- match.arg(geom)
@@ -66,24 +78,37 @@ plot_betas <- function(betas_df, geom = c("boxplot", "violin")) {
     } else if (geom == "violin") {
         p <- p + geom_violin()
     }
-    p <- p + facet_grid(x_dist + as.factor(sd) ~ coef)
+    p <- p + facet_grid(x_dist ~ as.factor(sd) + coef)
     p <- p + scale_color_discrete(name = "(rho1, rho12, rho2)") +
         xlab("n") + ylab("Coefficient Value")
     return(p)
 }
 
 # zero betas
-betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9", ] %>%
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9" & sd > 0.1, ] %>%
     plot_betas(geom = "violin") + ggtitle("Zero Betas") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
-```{r nonzero-betas, fig.height = 8, cache = TRUE}
+```{r nonzero-betas, fig.height = 7, fig.width = 12, cache = TRUE}
 
 # nonzero betas
 betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ] %>%
-    plot_betas() + ggtitle("Nonzero Betas")
+    plot_betas() + ggtitle("Nonzero Betas") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    geom_hline(aes(yintercept = 0))
+
+```
+
+```{r nonzero-betas-prop}
+
+selected_betas <- betas_df[n == 5000 & sd > 0.1 & rho1 == 0.3 & rho2 == 0.3 & coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ]
+ggplot(selected_betas,
+       aes(x = x_dist, y = value, color = x_dist)) +
+    geom_boxplot() + facet_grid(~coef) +
+    xlab("Distribution of X") + ylab("Coefficient Value") +
+    guides(color = FALSE)
 
 ```
 
@@ -99,15 +124,41 @@ betas_df[coef == "alpha", ] %>%
 
 ```
 
+```{r plot-errors-onecase, fig.height = 6, fig.width = 12}
+
+p_small <- errors_df[sd == 0.01 & rho1 == 0.3 & rho2 == 0.3,] %>%
+    ggplot(aes(y = value, color = error, x = as.factor(n))) +
+    geom_boxplot() + facet_grid(~ x_dist) +
+    xlab("n") + ylab("MSE") +
+    ggtitle("Error Comparison, Small Errors, rho1 = rho12 = rho3 = 0.3")
+
+p_large <- errors_df[sd > 0.1 & rho1 == 0.3 & rho2 == 0.3,] %>%
+    ggplot(aes(y = value, color = error,
+               x = as.factor(n))) +
+    geom_boxplot() + facet_grid(~ x_dist) +
+    xlab("n") + ylab("MSE") +
+    ggtitle("Error Comparison, Big Errors, rho1 = rho12 = rho3 = 0.3")
+plot_grid(p_small, p_large, nrow = 1)
+
+```
+
 ```{r plot-errors, fig.height = 7}
 
-ggplot(errors_df,
-       aes(y = value, color = error,
+errors_df[sd == 0.01,] %>%
+ggplot(aes(y = value, color = error,
            x = interaction(rho1, rho12, rho2, sep = ", "))) +
-    geom_boxplot() + facet_grid(x_dist + as.factor(sd) ~ n) +
+    geom_boxplot() + facet_grid(x_dist ~ n) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     xlab("(rho1, rho12, rho2)") + ylab("MSE") +
-    ggtitle("Error Comparison")
+    ggtitle("Error Comparison, Small Errors")
+
+errors_df[sd == 0.3,] %>%
+ggplot(aes(y = value, color = error,
+           x = interaction(rho1, rho12, rho2, sep = ", "))) +
+    geom_boxplot() + facet_grid(x_dist ~ n) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    xlab("(rho1, rho12, rho2)") + ylab("MSE") +
+    ggtitle("Error Comparison, Big Errors")
 
 ```
 
@@ -115,7 +166,7 @@ ggplot(errors_df,
 # Exploration of Results
 
 ```{r exploration-setup}
-betas <- c(1, 0, 0, 0, 0, 0, -0.3, -0.1, 0.1, 0.3)
+betas <- c(3, 0, 0, 0, 0, 0, -0.3, -0.1, 0.1, 0.3)
 corr_mat <- matrix(0.3, nrow = 9, ncol = 9)
 diag(corr_mat) <- 1
 n <- 1000
@@ -223,8 +274,8 @@ for (i in 1:2) {
 
 ```
 
-```{r exploration-preds, fig.height = 9, cache = TRUE}
-par(mfcol = c(3, 2))
+```{r exploration-preds, fig.height = 7, cache = TRUE}
+par(mfrow = c(2, 3))
 for (i in 1:2) {
     plt_lims <- range(testsim_lst[[i]]$test_ys)
     plot(testsim_lst[[i]]$test_ys, testsim_lst[[i]]$true_preds,
