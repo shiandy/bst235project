@@ -106,7 +106,8 @@ system.time({
                                    corr_mat2 = corr_mat)
         }
         sim_ret <- link_viol_sim(nsims, betas, x_simulator, n,
-                                 error_simulator, testsize = 10000)
+                                 error_simulator, testsize = 10000,
+                                 cv = TRUE)
 
         # get the result, add data about simulation parameters
         df_cur <- as.data.frame(cbind(sim_ret$betas, sim_ret$errors))

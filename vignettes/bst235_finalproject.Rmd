@@ -220,7 +220,7 @@ test_simulation <- function(sd) {
     train_yhat <- predict(alasso_cv, newx = train_dat$xs,
                           s = "lambda.min")
     best_h <- bst235Project:::select_bandwidth(train_yhat, train_dat$ys,
-                                               nfolds = 10, cv = FALSE)
+                                               nfolds = 10, cv = TRUE)
     calibrate_preds <-
         bst235Project:::np_calibrate(test_dat$xs, train_dat$xs,
                                      train_dat$ys, alasso_cv,

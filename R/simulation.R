@@ -155,7 +155,7 @@ np_calibrate <- function(new_xs, xs, ys, glmnet_obj, bandwidth)  {
 
 #' Cross-validation for bandwidth
 #'
-select_bandwidth <- function(yhat, ys, cv = FALSE, nfolds = 10) {
+select_bandwidth <- function(yhat, ys, cv = FALSE, nfolds = 5) {
     stopifnot(length(yhat) == length(ys))
     if (sd(yhat) < 1e-6) {
         warning("All yhat are the same, returning bandwidth 1")
