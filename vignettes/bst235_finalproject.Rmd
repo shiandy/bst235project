@@ -51,6 +51,11 @@ betas_zeros <- betas_df[coef != "alpha" & coef != "beta6" & coef !=
                                              x_dist, sd)] %>%
     dplyr::rename(prop_zeros = V1)#%>%
     #xtable(digits = 3) %>% print(comment = FALSE)
+
+betas_nonzeros <- betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", mean(abs(value) > 1e-8), by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
+    dplyr::rename(prop_nonzeros = V1)#%>%
+    #xtable(digits = 3) %>% print(comment = FALSE)
+
 hist(betas_zeros$prop_zeros, xlab = "Proportion of Zero Betas = 0",
      main = "Proportion of Zero Betas = 0")
 all(betas_zeros[n == 5000 & sd == 0.01, prop_zeros] == 1)
@@ -69,9 +74,6 @@ betas_zeros[n == 5000 & sd == 0.3, ] %>%
 
 ```{r prop-nonzeros, results = "hide"}
 
-betas_nonzeros <- betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", mean(abs(value) > 1e-8), by = .(coef, n, rho1, rho12, rho2, x_dist, sd)] %>%
-    dplyr::rename(prop_nonzeros = V1)#%>%
-    #xtable(digits = 3) %>% print(comment = FALSE)
 hist(betas_nonzeros$prop_nonzeros,
      xlab = "Proportion of Nonzero Betas != 0",
      main = "Proportion of Nonzero Betas != 0")
