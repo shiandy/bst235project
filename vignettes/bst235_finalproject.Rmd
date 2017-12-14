@@ -23,6 +23,7 @@ library(data.table)
 library(ggplot2)
 library(cowplot)
 library(xtable)
+library(bst235Project)
 
 ```
 
@@ -84,7 +85,7 @@ betas_nonzeros[n == 5000 & sd == 0.3, ]
 
 ```
 
-```{r zero-betas, fig.height = 7, fig.width = 12, cache = TRUE}
+```{r zero-betas, fig.height = 7, fig.width = 12}
 # zero betas
 betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9" & sd > 0.1, ] %>%
     ggplot(aes(x = as.factor(n), y = value,
@@ -258,12 +259,12 @@ testsim_lst <- list(testsim_smallerr, testsim_bigerr)
 title_lst <- c("Small Error", "Big Error")
 ```
 
-```{r exploration-hists, fig.height = 5, cache = TRUE}
+```{r exploration-hists, fig.height = 5}
 plot_hists(testsim_smallerr)
 plot_hists(testsim_bigerr)
 ```
 
-```{r exploration-resids, fig.height = 6, cache = TRUE}
+```{r exploration-resids, fig.height = 6}
 par(mfcol = c(2, 2))
 for (i in 1:2) {
     plot(testsim_lst[[i]]$train_yhat, testsim_lst[[i]]$train_ys,
@@ -280,7 +281,7 @@ for (i in 1:2) {
 
 ```
 
-```{r exploration-kernel, fig.height = 4, cache = TRUE}
+```{r exploration-kernel, fig.height = 4}
 par(mfcol = c(1, 2))
 for (i in 1:2) {
     naive_preds <- testsim_lst[[i]]$naive_preds
@@ -296,7 +297,7 @@ for (i in 1:2) {
 
 ```
 
-```{r exploration-preds, fig.height = 7, cache = TRUE}
+```{r exploration-preds, fig.height = 7}
 par(mfrow = c(2, 3))
 for (i in 1:2) {
     plt_lims <- range(testsim_lst[[i]]$test_ys)
@@ -318,7 +319,7 @@ for (i in 1:2) {
 }
 ```
 
-```{r exploration-true-cond-means, fig.height = 7, cache = TRUE}
+```{r exploration-true-cond-means, fig.height = 7}
 par(mfrow = c(2, 3))
 for (i in 1:2) {
     plt_lims <- range(testsim_lst[[i]]$true_condmean)
