@@ -31,30 +31,20 @@ block_corr <- function(n1, n2, rho1, rho12, rho2) {
     return(ret)
 }
 
-rmvnorm_mixture <- function(n, mu1, mu2, corr_mat1, corr_mat2) {
-    n1 <- n/2
-    n2 <- n/2
-    xs1 <- mvtnorm::rmvnorm(n1, mean = mu1, sigma = corr_mat1)
-    xs2 <- mvtnorm::rmvnorm(n2, mean = mu2, sigma = corr_mat2)
-    return(rbind(xs1, xs2))
+rmvnorm_distorted <- function(n, corr_mat) {
+    xs <- mvtnorm::rmvnorm(n, sigma = corr_mat)
+    xs[,8] <- xs[,8] + 0.5*(xs[,7]^2-1)
+    return(xs)
 }
-
-# corr_mat_test <- matrix(0.3, nrow = 2, ncol = 2)
-# diag(corr_mat_test) <- 1
-# xs <- rmvnorm_mixture(10000, rep(-5, 2), rep(5, 2), corr_mat_test,
-#                       corr_mat_test)
-# ggplot(data.table(xs), aes(x = V1, y = V2)) + geom_density2d()
-# qplot(x = pnorm(xs %*% c(-0.3, 0.3)), geom = "histogram", bins = 20)
 
 # SIMULATION SETUP -----------------------------------------------------
 
 # number of simulations to run
 nsims <- 1000
-#ns <- c(1000, 10000)
 ns <- c(500, 1000, 5000)
 rho1s <- c(0, 0.3)
 rho2s <- c(0, 0.3)
-x_dist <- c("normal", "uniform", "mixture")
+x_dist <- c("normal", "uniform", "distorted_normal")
 
 n_zeros <- 5
 n_nonzeros <- 4
@@ -98,16 +88,14 @@ system.time({
             x_simulator <- partial(rmvnorm, sigma = corr_mat)
         } else if (x_dist == "uniform") {
             x_simulator <- partial(runif_corr, corr = corr_mat)
-        } else if (x_dist == "mixture") {
-            p <- length(betas) - 1
-            x_simulator <- partial(rmvnorm_mixture, mu1 = rep(-5, p),
-                                   mu2 = rep(5, p),
-                                   corr_mat1 = corr_mat,
-                                   corr_mat2 = corr_mat)
+        }
+        else if (x_dist == "distorted_normal") {
+            x_simulator <- partial(rmvnorm_distorted,
+                                   corr_mat = corr_mat)
         }
         sim_ret <- link_viol_sim(nsims, betas, x_simulator, n,
                                  error_simulator, testsize = 10000,
-                                 cv = TRUE)
+                                 cv = FALSE)
 
         # get the result, add data about simulation parameters
         df_cur <- as.data.frame(cbind(sim_ret$betas, sim_ret$errors))
