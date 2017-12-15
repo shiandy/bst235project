@@ -89,7 +89,7 @@ betas_nonzeros[n == 5000 & sd == 0.3, ]
 
 ```{r zero-betas, fig.height = 7, fig.width = 12}
 # zero betas
-betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9" & sd > 0.1, ] %>%
+betas_df[coef != "alpha" & coef != "beta6" & coef != "beta7" & coef != "beta8" & coef != "beta9", ] %>%
     ggplot(aes(x = as.factor(n), y = value,
                color = interaction(rho1, rho12, rho2, sep = ", "))) +
     geom_violin() + facet_grid(x_dist ~ as.factor(sd) + coef) +
@@ -223,7 +223,7 @@ test_simulation <- function(sd) {
     train_yhat <- predict(alasso_cv, newx = train_dat$xs,
                           s = "lambda.min")
     best_h <- bst235Project:::select_bandwidth(train_yhat, train_dat$ys,
-                                               nfolds = 10, cv = TRUE)
+                                               nfolds = 10, cv = FALSE)
     calibrate_preds <-
         bst235Project:::np_calibrate(test_dat$xs, train_dat$xs,
                                      train_dat$ys, alasso_cv,
@@ -344,7 +344,10 @@ for (i in 1:2) {
 }
 ```
 
-```{r test-cv, eval = FALSE}
+```{r test-cv, eval = TRUE, cache = TRUE}
+error_simulator <- function(n) { rnorm(n, sd = 0.3) }
+n <- 1000
+
 system.time({
     set.seed(1262)
     sim_res_cv <- link_viol_sim(1000, betas, x_simulator2, n,
