@@ -8,7 +8,12 @@ Public Health.
 ## How to Install
 
 This is an R package developed for the simulation part of our BST 235
-Project. You can install the package using 
+Project. You can install the package using
+
+    if (!require(devtools)) {
+        install.packages("devtools")
+    }
+    devtools::install_github("shiandy/bst235Project")
 
 ## Guide
 
