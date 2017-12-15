@@ -12,7 +12,7 @@ vignette: >
 ```{r setup, echo = FALSE}
 knitr::opts_chunk$set(fig.width = 8, fig.height = 5,
                       fig.align = "center", message = TRUE,
-                      warning = TRUE, echo = FALSE)
+                      warning = TRUE, echo = TRUE)
 
 ```
 
@@ -42,6 +42,8 @@ errors_df <- res_df[startsWith(coef, "error_"), ] %>%
 betas_df <- res_df[!startsWith(coef, "error_"), ]
 
 ```
+
+## Betas
 
 ```{r prop-zeros}
 
@@ -122,12 +124,16 @@ betas_df[coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", 
 
 selected_betas <- betas_df[n == 5000 & sd > 0.1 & rho1 == 0.3 & rho2 == 0.3 & coef == "beta6" | coef == "beta7" | coef == "beta8" | coef == "beta9", ]
 
+selected_betas[, mean(ratio), by = .(x_dist, coef)] %>%
+    xtable(digits = 3)
+
 ggplot(selected_betas,
        aes(x = x_dist, y = ratio, color = x_dist)) +
     geom_boxplot() + facet_grid(~coef) +
     xlab("Distribution of X") + ylab("Coefficient Value / True Value") +
     guides(color = FALSE) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("True Nonzero Betas; n = 5000, sigma = 0.03, rho1 = rho12 = rho2 = 0.3")
 
 ```
 
@@ -144,6 +150,8 @@ betas_df[coef == "alpha", ] %>%
     ggtitle("alpha")
 
 ```
+
+## Prediction Errors
 
 ```{r plot-errors-onecase, fig.height = 6, fig.width = 12}
 
@@ -187,7 +195,7 @@ ggplot(aes(y = value, color = error,
 ```
 
 
-# Exploration of Results
+## Exploration of Results
 
 ```{r exploration-setup}
 betas <- c(3, 0, 0, 0, 0, 0, -0.3, -0.1, 0.1, 0.3)
@@ -344,25 +352,37 @@ for (i in 1:2) {
 }
 ```
 
+## Evaluating Cross-Validation
+
 ```{r test-cv, eval = TRUE, cache = TRUE}
 error_simulator <- function(n) { rnorm(n, sd = 0.3) }
-n <- 1000
+n <- 500
 
 system.time({
     set.seed(1262)
     sim_res_cv <- link_viol_sim(1000, betas, x_simulator2, n,
-                                 error_simulator = error_simulator,
-                                 testsize = 10000, cv = TRUE)
+                                error_simulator = error_simulator,
+                                testsize = 10000, cv = TRUE)
 })
 system.time({
     set.seed(1262)
     sim_res_nocv <- link_viol_sim(1000, betas, x_simulator2, n,
-                                 error_simulator = error_simulator,
-                                 testsize = 10000, cv = FALSE)
+                                  error_simulator = error_simulator,
+                                  testsize = 10000, cv = FALSE)
 })
-boxplot(sim_res_cv$errors)
-boxplot(sim_res_nocv$errors)
+
+```
+
+Boxes in gray with CV, boxes in white without CV. Can see errors are the
+same.
+
+```{r test-cv-plot}
+boxplot(cbind(sim_res_cv$errors, sim_res_nocv$errors),
+        col = c(rep("grey", 3), rep("white", 3)),
+        main = "Errors with/without CV")
+print("Median errors with CV:")
 apply(sim_res_cv$errors, 2, median)
+print("Median errors without CV:")
 apply(sim_res_nocv$errors, 2, median)
 
 ```
