@@ -27,3 +27,10 @@ complete. Then, running the vignette in `bst235_finalproject.Rmd` will
 generate all the necessary figures/plots.  The vignette also runs a
 small experiment, so running the code in the vignette may also take some
 time.
+
+## Presentation and Final Writeup
+
+Our presentation is in the file
+[presentation-5-handout_final.pdf](https://github.com/shiandy/bst235project/blob/master/presentation-5-handout_final.pdf)
+and the final writeup is in the file
+[bst235-writeup-problem5_final.pdf](https://github.com/shiandy/bst235project/blob/master/bst235-writeup-problem5_final.pdf).
